@@ -1,6 +1,7 @@
-// INTUBATALK Windows Desktop Application & Launcher
-// Native Windows executable compiled with C# and embedded icon.
-// Provides standalone app window launching, server management, and system tray integration.
+// INTUBATALK Windows Desktop Application & Role Chooser
+// Native Windows executable compiled with C# and embedded high-res icon.
+// Provides an accessible role selection screen (Patient vs Nurse), standalone app window launching,
+// background server lifecycle management, and system tray integration.
 
 using System;
 using System.IO;
@@ -34,11 +35,11 @@ namespace IntubaTalk
                 else if (arg.Equals("--tray", StringComparison.OrdinalIgnoreCase)) startInTray = true;
             }
 
-            Application.Run(new MainForm(initialRoute, startInTray));
+            Application.Run(new RoleChooserForm(initialRoute, startInTray));
         }
     }
 
-    public class MainForm : Form
+    public class RoleChooserForm : Form
     {
         private Process serverProcess = null;
         private bool ownsServer = false;
@@ -51,19 +52,18 @@ namespace IntubaTalk
         private string appDir;
         private Icon customIcon;
 
-        // Colors matching INTUBATALK Claymorphism palette
-        private Color colBg = Color.FromArgb(243, 241, 236);
-        private Color colSurface = Color.FromArgb(248, 247, 244);
-        private Color colMint = Color.FromArgb(76, 177, 160);
-        private Color colMintDark = Color.FromArgb(55, 145, 128);
-        private Color colTeal = Color.FromArgb(63, 127, 167);
-        private Color colTealDark = Color.FromArgb(51, 106, 140);
-        private Color colText = Color.FromArgb(38, 51, 64);
-        private Color colTextSoft = Color.FromArgb(93, 108, 120);
-        private Color colRed = Color.FromArgb(212, 84, 84);
-        private Color colLine = Color.FromArgb(201, 195, 183);
+        // Palette matching INTUBATALK Clinical Claymorphism Design System
+        private readonly Color colBg = Color.FromArgb(243, 241, 236);
+        private readonly Color colSurface = Color.FromArgb(248, 247, 244);
+        private readonly Color colMint = Color.FromArgb(64, 168, 150);
+        private readonly Color colMintDark = Color.FromArgb(45, 135, 120);
+        private readonly Color colTeal = Color.FromArgb(51, 106, 140);
+        private readonly Color colTealDark = Color.FromArgb(36, 80, 108);
+        private readonly Color colText = Color.FromArgb(38, 51, 64);
+        private readonly Color colTextSoft = Color.FromArgb(93, 108, 120);
+        private readonly Color colLine = Color.FromArgb(209, 203, 192);
 
-        public MainForm(string initialRoute, bool startInTray)
+        public RoleChooserForm(string initialRoute, bool startInTray)
         {
             appDir = AppDomain.CurrentDomain.BaseDirectory;
 
@@ -83,6 +83,9 @@ namespace IntubaTalk
             healthTimer.Tick += (s, e) => CheckServerStatus();
             healthTimer.Start();
 
+            this.KeyPreview = true;
+            this.KeyDown += RoleChooserForm_KeyDown;
+
             if (!string.IsNullOrEmpty(initialRoute))
             {
                 LaunchApp(initialRoute);
@@ -95,20 +98,49 @@ namespace IntubaTalk
             }
         }
 
+        private void RoleChooserForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.P || e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
+            {
+                LaunchApp("/");
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.N || e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
+            {
+                LaunchApp("/nurse");
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.D || e.KeyCode == Keys.D3 || e.KeyCode == Keys.NumPad3)
+            {
+                LaunchApp("/dual");
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.B || e.KeyCode == Keys.D4 || e.KeyCode == Keys.NumPad4)
+            {
+                LaunchApp("/board");
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.F1 || e.KeyCode == Keys.H)
+            {
+                ShowHelp();
+                e.Handled = true;
+            }
+        }
+
         private void InitUI()
         {
-            this.Text = "INTUBATALK · ICU Communication System";
-            this.Size = new Size(740, 580);
-            this.MinimumSize = new Size(680, 520);
+            this.Text = "INTUBATALK · Choose Your Role (Patient or Nurse)";
+            this.Size = new Size(860, 660);
+            this.MinimumSize = new Size(760, 580);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = colBg;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
 
-            // Header Panel
+            // ================= HEADER =================
             Panel pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 90,
+                Height = 100,
                 BackColor = colSurface,
                 Padding = new Padding(24, 16, 24, 12),
             };
@@ -123,19 +155,19 @@ namespace IntubaTalk
             Label lblTitle = new Label
             {
                 Text = "INTUBATALK",
-                Font = new Font("Georgia", 18f, FontStyle.Bold),
+                Font = new Font("Georgia", 20f, FontStyle.Bold),
                 ForeColor = colText,
                 AutoSize = true,
-                Location = new Point(22, 14)
+                Location = new Point(22, 12)
             };
 
             Label lblSubtitle = new Label
             {
-                Text = "Adaptive Communication System for Intubated ICU Patients",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                Text = "Adaptive Communication System for Intubated ICU Patients — Choose your mode:",
+                Font = new Font("Segoe UI", 10.5f, FontStyle.Bold),
                 ForeColor = colTextSoft,
                 AutoSize = true,
-                Location = new Point(24, 48)
+                Location = new Point(24, 52)
             };
 
             lblStatus = new Label
@@ -145,7 +177,7 @@ namespace IntubaTalk
                 ForeColor = Color.DarkOrange,
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(480, 20)
+                Location = new Point(560, 16)
             };
 
             lblLan = new Label
@@ -155,7 +187,7 @@ namespace IntubaTalk
                 ForeColor = colTextSoft,
                 AutoSize = true,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(480, 48)
+                Location = new Point(560, 48)
             };
 
             pnlHeader.Controls.Add(lblTitle);
@@ -164,78 +196,63 @@ namespace IntubaTalk
             pnlHeader.Controls.Add(lblLan);
             this.Controls.Add(pnlHeader);
 
-            // Main Action Grid Panel
-            TableLayoutPanel grid = new TableLayoutPanel
+            // ================= MAIN ROLE SELECTION CARDS =================
+            TableLayoutPanel roleGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 3,
-                Padding = new Padding(22, 16, 22, 16),
+                RowCount = 1,
+                Padding = new Padding(20, 18, 20, 12),
                 BackColor = colBg
             };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 35f));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 35f));
-            grid.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
+            roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
 
-            // Card 1: Patient Tablet
-            Button btnPatient = CreateCardButton(
-                "📱 Open Patient Tablet",
-                "Full AAC communication board with core needs, pain scale, spelling, eye-blink & emergency alert.",
-                colMint, colMintDark, Color.White);
-            btnPatient.Click += (s, e) => LaunchApp("/");
-            grid.Controls.Add(btnPatient, 0, 0);
+            // Card 1: Patient Option
+            Panel pnlPatient = CreateRoleCard(
+                "BEDSIDE PATIENT TABLET",
+                "👤 I Am the Patient",
+                "Designed for intubated or non-verbal ICU patients to communicate instantly without vocal cords.",
+                new string[] {
+                    "✓ 1-Tap needs: Breathing, Suction, Pain, Thirst, Toilet",
+                    "✓ Numerical 0 to 10 visual pain severity rating",
+                    "✓ Nurse-assisted eye-blink protocol (1 = Yes, 2 = No)",
+                    "✓ Freehand alphabet spelling pad & speech-to-text",
+                    "✓ Loud emergency alert with patient cancel control"
+                },
+                "▶ Open Patient Tablet  (Press P or 1)",
+                colMint, colMintDark,
+                () => LaunchApp("/")
+            );
+            roleGrid.Controls.Add(pnlPatient, 0, 0);
 
-            // Card 2: Nurse Dashboard
-            Button btnNurse = CreateCardButton(
-                "🩺 Open Nurse Dashboard",
-                "Live request feed, emergency sirens, card acknowledgements, audio speech & bedside notes.",
-                colTeal, colTealDark, Color.White);
-            btnNurse.Click += (s, e) => LaunchApp("/nurse");
-            grid.Controls.Add(btnNurse, 1, 0);
+            // Card 2: Nurse Option
+            Panel pnlNurse = CreateRoleCard(
+                "NURSE STATION DASHBOARD",
+                "🩺 I Am the Nurse",
+                "Designed for bedside nurses, doctors and ward staff to monitor and respond to patient requests.",
+                new string[] {
+                    "✓ Live incoming request feed paired via 4-digit code",
+                    "✓ Repeating emergency sirens & distinctive chimes",
+                    "✓ Instant filter tabs: Emergencies, Active, Handled",
+                    "✓ Text-to-speech speaker reads requests aloud",
+                    "✓ Patient ability profile & online presence tracking"
+                },
+                "▶ Open Nurse Dashboard  (Press N or 2)",
+                colTeal, colTealDark,
+                () => LaunchApp("/nurse")
+            );
+            roleGrid.Controls.Add(pnlNurse, 1, 0);
 
-            // Card 3: Dual Interactive Simulator
-            Button btnDual = CreateCardButton(
-                "👥 Dual Presentation View",
-                "Side-by-side tablet & nurse station on one screen. Perfect for live presentations, teaching & testing.",
-                Color.FromArgb(70, 150, 138), Color.FromArgb(50, 120, 110), Color.White);
-            btnDual.Click += (s, e) => LaunchApp("/dual");
-            grid.Controls.Add(btnDual, 0, 1);
+            this.Controls.Add(roleGrid);
 
-            // Card 4: Printable Backup Board
-            Button btnBoard = CreateCardButton(
-                "📋 Printable Backup Board",
-                "Laminated A4 communication board fallback for when devices have zero battery or no Wi-Fi.",
-                Color.FromArgb(235, 230, 220), Color.FromArgb(220, 214, 202), colText);
-            btnBoard.Click += (s, e) => LaunchApp("/board");
-            grid.Controls.Add(btnBoard, 1, 1);
-
-            // Card 5: Test Console
-            Button btnConsole = CreateCardButton(
-                "🧪 Diagnostic Test Console",
-                "Check server connectivity, test endpoints, and run through the clinical verification checklist.",
-                Color.FromArgb(235, 230, 220), Color.FromArgb(220, 214, 202), colText);
-            btnConsole.Click += (s, e) => LaunchApp("/console");
-            grid.Controls.Add(btnConsole, 0, 2);
-
-            // Card 6: LAN Link & Vercel Helper
-            Button btnLanCopy = CreateCardButton(
-                "🌐 Copy Bedside Wi-Fi Link",
-                "Copy LAN URL to open tablet and nurse views on real iPads, Android tablets, or phones on ward Wi-Fi.",
-                Color.FromArgb(235, 230, 220), Color.FromArgb(220, 214, 202), colText);
-            btnLanCopy.Click += (s, e) => CopyLanUrl();
-            grid.Controls.Add(btnLanCopy, 1, 2);
-
-            this.Controls.Add(grid);
-
-            // Bottom Status / Controls Bar
+            // ================= BOTTOM TOOLBAR =================
             Panel pnlBottom = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 44,
+                Height = 60,
                 BackColor = colSurface,
-                Padding = new Padding(16, 8, 16, 8)
+                Padding = new Padding(20, 12, 20, 12)
             };
             pnlBottom.Paint += (s, e) =>
             {
@@ -245,125 +262,201 @@ namespace IntubaTalk
                 }
             };
 
-            Button btnRestart = new Button
+            FlowLayoutPanel flowLeft = new FlowLayoutPanel
             {
-                Text = "🔄 Restart Server",
-                Font = new Font("Segoe UI", 8.5f),
-                Size = new Size(115, 26),
-                Location = new Point(16, 8),
-                BackColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnRestart.FlatAppearance.BorderColor = colLine;
-            btnRestart.Click += (s, e) => RestartServer();
-
-            Button btnVercel = new Button
-            {
-                Text = "🚀 Ready for Vercel",
-                Font = new Font("Segoe UI", 8.5f),
-                Size = new Size(130, 26),
-                Location = new Point(140, 8),
-                BackColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnVercel.FlatAppearance.BorderColor = colLine;
-            btnVercel.Click += (s, e) => ShowVercelInfo();
-
-            Button btnTray = new Button
-            {
-                Text = "Minimize to Tray",
-                Font = new Font("Segoe UI", 8.5f),
-                Size = new Size(120, 26),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(590, 8),
-                BackColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
-            btnTray.FlatAppearance.BorderColor = colLine;
-            btnTray.Click += (s, e) =>
-            {
-                this.WindowState = FormWindowState.Minimized;
-                this.ShowInTaskbar = false;
-                if (trayIcon != null)
-                {
-                    trayIcon.ShowBalloonTip(2000, "INTUBATALK Running", "Server active in system tray. Double-click tray icon to restore.", ToolTipIcon.Info);
-                }
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                WrapContents = false,
+                Height = 40
             };
 
-            pnlBottom.Controls.Add(btnRestart);
-            pnlBottom.Controls.Add(btnVercel);
-            pnlBottom.Controls.Add(btnTray);
+            Button btnDual = CreateSmallButton("👥 Dual Presentation View (3/D)", (s, e) => LaunchApp("/dual"));
+            btnDual.Width = 210;
+            Button btnBoard = CreateSmallButton("📋 Printable Board (4/B)", (s, e) => LaunchApp("/board"));
+            btnBoard.Width = 170;
+            Button btnWifi = CreateSmallButton("🌐 Copy Wi-Fi Link", (s, e) => CopyLanUrl());
+            btnWifi.Width = 140;
+
+            flowLeft.Controls.Add(btnDual);
+            flowLeft.Controls.Add(btnBoard);
+            flowLeft.Controls.Add(btnWifi);
+
+            FlowLayoutPanel flowRight = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                WrapContents = false,
+                Height = 40
+            };
+
+            Button btnHelp = CreateSmallButton("❓ Help & Hotkeys", (s, e) => ShowHelp());
+            btnHelp.Width = 130;
+            Button btnRestart = CreateSmallButton("🔄 Restart Server", (s, e) => RestartServer());
+            btnRestart.Width = 125;
+
+            flowRight.Controls.Add(btnHelp);
+            flowRight.Controls.Add(btnRestart);
+
+            pnlBottom.Controls.Add(flowLeft);
+            pnlBottom.Controls.Add(flowRight);
             this.Controls.Add(pnlBottom);
 
-            // Double buffering
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
         }
 
-        private Button CreateCardButton(string title, string desc, Color c1, Color c2, Color textCol)
+        private Panel CreateRoleCard(string badge, string title, string description, string[] features, string ctaText, Color c1, Color c2, Action onLaunch)
+        {
+            Panel card = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Margin = new Padding(12),
+                BackColor = Color.White,
+                Padding = new Padding(22, 20, 22, 18)
+            };
+
+            card.Paint += (s, e) =>
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                Rectangle rect = new Rectangle(0, 0, card.Width - 1, card.Height - 1);
+
+                // Subtle shadow & border
+                using (Pen p = new Pen(Color.FromArgb(215, 210, 200), 1.5f))
+                {
+                    e.Graphics.DrawRectangle(p, rect);
+                }
+
+                // Top accent bar
+                using (LinearGradientBrush b = new LinearGradientBrush(new Rectangle(0, 0, card.Width, 8), c1, c2, 0f))
+                {
+                    e.Graphics.FillRectangle(b, 0, 0, card.Width, 8);
+                }
+            };
+
+            Label lblBadge = new Label
+            {
+                Text = badge,
+                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
+                ForeColor = c1,
+                AutoSize = true,
+                Location = new Point(22, 18)
+            };
+
+            Label lblCardTitle = new Label
+            {
+                Text = title,
+                Font = new Font("Segoe UI", 16f, FontStyle.Bold),
+                ForeColor = colText,
+                AutoSize = true,
+                Location = new Point(20, 36)
+            };
+
+            Label lblDesc = new Label
+            {
+                Text = description,
+                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
+                ForeColor = colTextSoft,
+                Size = new Size(card.Width - 44, 42),
+                Location = new Point(22, 72),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+            };
+
+            // Bullet features panel
+            Panel pnlFeatures = new Panel
+            {
+                Location = new Point(22, 118),
+                Size = new Size(card.Width - 44, 170),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                BackColor = Color.FromArgb(250, 250, 248)
+            };
+            pnlFeatures.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(Color.FromArgb(235, 230, 222)))
+                {
+                    e.Graphics.DrawRectangle(p, 0, 0, pnlFeatures.Width - 1, pnlFeatures.Height - 1);
+                }
+            };
+
+            int yOffset = 10;
+            foreach (string feat in features)
+            {
+                Label lblFeat = new Label
+                {
+                    Text = feat,
+                    Font = new Font("Segoe UI", 9.2f, FontStyle.Regular),
+                    ForeColor = colText,
+                    Location = new Point(12, yOffset),
+                    AutoSize = true
+                };
+                pnlFeatures.Controls.Add(lblFeat);
+                yOffset += 28;
+            }
+
+            // Big CTA Button
+            Button btnCta = new Button
+            {
+                Text = ctaText,
+                Height = 52,
+                Dock = DockStyle.Bottom,
+                FlatStyle = FlatStyle.Flat,
+                Font = new Font("Segoe UI", 11.5f, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = c1,
+                Cursor = Cursors.Hand
+            };
+            btnCta.FlatAppearance.BorderSize = 0;
+            btnCta.Paint += (s, e) =>
+            {
+                using (LinearGradientBrush b = new LinearGradientBrush(btnCta.ClientRectangle, c1, c2, 135f))
+                {
+                    e.Graphics.FillRectangle(b, btnCta.ClientRectangle);
+                }
+                TextRenderer.DrawText(e.Graphics, ctaText, btnCta.Font, btnCta.ClientRectangle, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            };
+            btnCta.Click += (s, e) => onLaunch();
+
+            card.Controls.Add(lblBadge);
+            card.Controls.Add(lblCardTitle);
+            card.Controls.Add(lblDesc);
+            card.Controls.Add(pnlFeatures);
+            card.Controls.Add(btnCta);
+
+            return card;
+        }
+
+        private Button CreateSmallButton(string text, EventHandler onClick)
         {
             Button btn = new Button
             {
-                Dock = DockStyle.Fill,
-                Margin = new Padding(8),
+                Text = text,
+                Height = 34,
+                Font = new Font("Segoe UI", 8.8f, FontStyle.Bold),
+                ForeColor = colText,
+                BackColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Cursor = Cursors.Hand,
-                TextAlign = ContentAlignment.TopLeft,
-                Padding = new Padding(14, 12, 14, 10),
-                BackColor = c1
+                Margin = new Padding(0, 0, 8, 0)
             };
-            btn.FlatAppearance.BorderSize = 1;
-            btn.FlatAppearance.BorderColor = Color.FromArgb(60, 255, 255, 255);
-
-            btn.Paint += (s, e) =>
-            {
-                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-
-                // Gradient background
-                using (LinearGradientBrush brush = new LinearGradientBrush(btn.ClientRectangle, c1, c2, 135f))
-                {
-                    e.Graphics.FillRectangle(brush, btn.ClientRectangle);
-                }
-
-                // Border
-                using (Pen p = new Pen(Color.FromArgb(40, 255, 255, 255), 1))
-                {
-                    e.Graphics.DrawRectangle(p, 0, 0, btn.Width - 1, btn.Height - 1);
-                }
-
-                // Text
-                using (SolidBrush bTitle = new SolidBrush(textCol))
-                using (Font fTitle = new Font("Segoe UI", 11f, FontStyle.Bold))
-                {
-                    e.Graphics.DrawString(title, fTitle, bTitle, new PointF(14, 12));
-                }
-
-                using (SolidBrush bDesc = new SolidBrush(Color.FromArgb(textCol == Color.White ? 220 : 160, textCol)))
-                using (Font fDesc = new Font("Segoe UI", 8.5f, FontStyle.Regular))
-                {
-                    RectangleF rectDesc = new RectangleF(14, 38, btn.Width - 28, btn.Height - 44);
-                    e.Graphics.DrawString(desc, fDesc, bDesc, rectDesc);
-                }
-            };
-
+            btn.FlatAppearance.BorderColor = colLine;
+            btn.Click += onClick;
             return btn;
         }
 
         private void InitTray()
         {
             trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("📱 Patient Tablet", null, (s, e) => LaunchApp("/"));
-            trayMenu.Items.Add("🩺 Nurse Dashboard", null, (s, e) => LaunchApp("/nurse"));
-            trayMenu.Items.Add("👥 Dual Simulator", null, (s, e) => LaunchApp("/dual"));
-            trayMenu.Items.Add("📋 Backup Board", null, (s, e) => LaunchApp("/board"));
+            trayMenu.Items.Add("📱 Open Patient Tablet", null, (s, e) => LaunchApp("/"));
+            trayMenu.Items.Add("🩺 Open Nurse Dashboard", null, (s, e) => LaunchApp("/nurse"));
+            trayMenu.Items.Add("👥 Open Dual Simulator", null, (s, e) => LaunchApp("/dual"));
+            trayMenu.Items.Add("📋 Open Printable Board", null, (s, e) => LaunchApp("/board"));
             trayMenu.Items.Add("-");
-            trayMenu.Items.Add("Open INTUBATALK Hub", null, (s, e) => RestoreFromTray());
-            trayMenu.Items.Add("Copy Wi-Fi LAN Link", null, (s, e) => CopyLanUrl());
+            trayMenu.Items.Add("Open Role Chooser Hub", null, (s, e) => RestoreFromTray());
+            trayMenu.Items.Add("Copy Bedside Wi-Fi URL", null, (s, e) => CopyLanUrl());
             trayMenu.Items.Add("-");
-            trayMenu.Items.Add("Exit INTUBATALK", null, (s, e) => Application.Exit());
+            trayMenu.Items.Add("Exit Application", null, (s, e) => Application.Exit());
 
             trayIcon = new NotifyIcon
             {
-                Text = "INTUBATALK ICU Communication",
+                Text = "INTUBATALK ICU System",
                 Icon = customIcon ?? SystemIcons.Application,
                 ContextMenuStrip = trayMenu,
                 Visible = true
@@ -389,7 +482,6 @@ namespace IntubaTalk
                 return;
             }
 
-            // Start standalone node server
             string serverJs = Path.Combine(appDir, "server.js");
             if (File.Exists(serverJs))
             {
@@ -411,12 +503,11 @@ namespace IntubaTalk
                 }
                 catch (Exception ex)
                 {
-                    lblStatus.Text = "● Node server failed: " + ex.Message;
-                    lblStatus.ForeColor = colRed;
+                    lblStatus.Text = "● Node start error: " + ex.Message;
+                    lblStatus.ForeColor = Color.Red;
                 }
             }
 
-            // Check after a brief delay
             new Thread(() =>
             {
                 Thread.Sleep(1200);
@@ -454,14 +545,14 @@ namespace IntubaTalk
             else
             {
                 lblStatus.Text = "● Server Offline";
-                lblStatus.ForeColor = colRed;
+                lblStatus.ForeColor = Color.Red;
             }
         }
 
         private void UpdateLanInfo()
         {
             string lanIp = GetLocalIpAddress();
-            lblLan.Text = "Wi-Fi LAN: http://" + lanIp + ":" + serverPort + "/";
+            lblLan.Text = "Bedside Wi-Fi: http://" + lanIp + ":" + serverPort + "/";
         }
 
         private string GetLocalIpAddress()
@@ -534,8 +625,27 @@ namespace IntubaTalk
             Clipboard.SetText(url);
             MessageBox.Show(
                 "Wi-Fi LAN URL copied to clipboard:\n\n" + url +
-                "\n\nOpen this address in Safari, Chrome, or Edge on bedside iPads, tablets, or nurse phones on the same Wi-Fi network.",
-                "INTUBATALK Wi-Fi Sharing",
+                "\n\nOpen this address in any browser (Safari, Chrome, Edge) on iPads, Android tablets, or phones on the same Wi-Fi network to connect directly to this patient room.",
+                "Bedside Wi-Fi Connection",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+
+        private void ShowHelp()
+        {
+            MessageBox.Show(
+                "INTUBATALK Accessibility & Quick Keys:\n\n" +
+                "• Press [P] or [1]: Enter Patient Tablet\n" +
+                "• Press [N] or [2]: Enter Nurse Dashboard\n" +
+                "• Press [D] or [3]: Enter Dual Presentation Simulator\n" +
+                "• Press [B] or [4]: Open Printable Backup Board\n" +
+                "• Press [Tab]: Navigate between role cards and buttons\n" +
+                "• Press [Enter]: Activate selected button\n\n" +
+                "How Pairing Works:\n" +
+                "1. Patient registers on the tablet -> receives a 4-digit room code.\n" +
+                "2. Nurse enters that 4-digit code on the dashboard -> devices pair instantly.\n" +
+                "3. In emergency, pressing the red button sounds a continuous alarm until silenced.",
+                "INTUBATALK Guide & Accessibility",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
@@ -551,27 +661,10 @@ namespace IntubaTalk
             StartServerIfNeeded();
         }
 
-        private void ShowVercelInfo()
-        {
-            MessageBox.Show(
-                "INTUBATALK is fully prepared for Vercel deployment!\n\n" +
-                "1. vercel.json is configured with clean routing and serverless rewrites.\n" +
-                "2. api/ directory has serverless handlers for all /api endpoints.\n" +
-                "3. public/ contains all static claymorphism assets.\n\n" +
-                "To deploy to Vercel:\n" +
-                "• In terminal, run: npx vercel\n" +
-                "• Or push this folder to GitHub and import it on vercel.com.\n" +
-                "Zero build config required!",
-                "Vercel Deployment Ready",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-        }
-
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
-                // Clean up server if we started it
                 if (ownsServer && serverProcess != null && !serverProcess.HasExited)
                 {
                     try { serverProcess.Kill(); } catch { }
@@ -586,4 +679,3 @@ namespace IntubaTalk
         }
     }
 }
-

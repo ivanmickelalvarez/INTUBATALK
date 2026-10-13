@@ -1,0 +1,247 @@
+/* INTUBATALK shared design tokens and primitives
+   Style: claymorphism. Light, calm, medical-grade typography.
+   Pairing: Public Sans (UI) + Lora (display). */
+
+:root {
+  /* Base surfaces */
+  --bg: #f3f1ec;
+  --bg-deep: #eae7e0;
+  --surface: #f8f7f4;
+  --surface-2: #efede7;
+  --line: #ddd8cf;
+  --line-strong: #c9c3b7;
+
+  /* Ink */
+  --text: #263340;
+  --text-soft: #5d6c78;
+  --text-faint: #909aa3;
+  --ink-on-fill: #1d2a33;
+
+  /* Accents: calm hospital teal + warm clay */
+  --accent: #3fa796;
+  --accent-deep: #338a7c;
+  --accent-ink: #ffffff;
+  --accent-soft: #d9efe9;
+  --clay: #d9866b;
+  --clay-deep: #bf6e55;
+  --clay-soft: #f7e2d9;
+
+  /* Status */
+  --alert: #d45454;
+  --alert-deep: #b84444;
+  --alert-soft: #fbe4e4;
+  --ok: #4a9d6f;
+  --ok-soft: #e0f0e7;
+  --warn: #c98a2d;
+  --warn-soft: #f6ecd9;
+
+  /* Clay shadows */
+  --clay-shadow:
+    8px 8px 18px rgba(103, 112, 108, 0.16),
+    -8px -8px 18px rgba(255, 255, 255, 0.85),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.65),
+    inset -1px -2px 3px rgba(96, 99, 106, 0.09);
+  --clay-raised:
+    10px 12px 24px rgba(103, 112, 108, 0.18),
+    -8px -8px 20px rgba(255, 255, 255, 0.9),
+    inset 1px 2px 3px rgba(255, 255, 255, 0.7),
+    inset -2px -3px 5px rgba(96, 99, 106, 0.12);
+  --clay-pressed:
+    inset 4px 4px 9px rgba(103, 112, 108, 0.2),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.8);
+  --clay-sm:
+    5px 6px 12px rgba(103, 112, 108, 0.14),
+    -4px -4px 10px rgba(255, 255, 255, 0.8);
+
+  --radius-xl: 28px;
+  --radius-lg: 22px;
+  --radius-md: 16px;
+
+  --font-ui: "Public Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-display: "Lora", Georgia, serif;
+}
+
+:root {
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(1200px 700px at 85% -10%, rgba(63, 167, 150, .07), transparent 60%),
+    radial-gradient(900px 600px at -10% 100%, rgba(217, 134, 107, .07), transparent 55%);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 16px;
+  line-height: 1.5;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: none; background: none; touch-action: manipulation; color: inherit; }
+img, svg { display: block; max-width: 100%; }
+
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.hidden { display: none !important; }
+
+/* Icon sizing helper */
+.ic { width: 1.25em; height: 1.25em; flex: none; }
+.ic-lg { width: 2em; height: 2em; }
+
+/* ---------- Clay primitives ---------- */
+
+.clay, .card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--clay-shadow);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+.card { padding: 20px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  font-weight: 700; border-radius: var(--radius-md); padding: 12px 22px;
+  font-size: 16px; letter-spacing: .01em;
+  background: var(--surface);
+  box-shadow: var(--clay-sm);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  color: var(--text);
+  transition: transform .1s ease, box-shadow .15s ease, background .15s ease;
+  user-select: none; -webkit-user-select: none;
+}
+.btn:active { transform: translateY(2px) scale(.99); box-shadow: var(--clay-pressed); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-mint {
+  background: linear-gradient(145deg, #4cb1a0, #39988a);
+  color: var(--accent-ink);
+  border-color: rgba(255, 255, 255, .35);
+  box-shadow:
+    6px 8px 16px rgba(51, 138, 124, .32),
+    -4px -4px 10px rgba(255, 255, 255, .5),
+    inset 1px 1px 2px rgba(255, 255, 255, .4),
+    inset -1px -2px 4px rgba(23, 82, 73, .28);
+}
+.btn-mint:hover { filter: brightness(1.04); }
+
+.btn-clay {
+  background: linear-gradient(145deg, #de9076, #c97a60);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .35);
+  box-shadow:
+    6px 8px 16px rgba(191, 110, 85, .3),
+    -4px -4px 10px rgba(255, 255, 255, .5),
+    inset 1px 1px 2px rgba(255, 255, 255, .4),
+    inset -1px -2px 4px rgba(140, 74, 55, .3);
+}
+
+.btn-red {
+  background: linear-gradient(145deg, #dd6161, #c04b4b);
+  color: #fff;
+  border-color: rgba(255, 255, 255, .3);
+  box-shadow:
+    6px 8px 16px rgba(184, 68, 68, .3),
+    -4px -4px 10px rgba(255, 255, 255, .5),
+    inset 1px 1px 2px rgba(255, 255, 255, .35),
+    inset -1px -2px 4px rgba(130, 45, 45, .3);
+}
+.btn-red:hover { filter: brightness(1.05); }
+
+.btn-ghost { box-shadow: none; background: transparent; border-color: transparent; color: var(--text-soft); }
+.btn-ghost:hover { color: var(--text); background: var(--surface-2); box-shadow: var(--clay-sm); }
+
+.btn-link { box-shadow: none; background: none; color: var(--accent-deep); text-decoration: underline; padding: 4px 6px; }
+
+/* Tiny pill buttons in toolbars. min-height keeps touch targets 44px+ on phones. */
+.btn-sm { padding: 7px 14px; font-size: 13.5px; border-radius: 12px; gap: 7px; min-height: 34px; }
+@media (pointer: coarse) {
+  .btn-sm { min-height: 44px; }
+  .btn { min-height: 44px; }
+}
+
+/* ---------- Badges ---------- */
+.badge {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px;
+  border-radius: 999px; font-size: 13px; font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  border: 1px solid rgba(255, 255, 255, .7);
+  box-shadow: var(--clay-sm);
+  white-space: nowrap;
+}
+.badge b { color: var(--text); }
+.badge.ok { background: var(--ok-soft); color: #2f7a50; }
+.badge.alert { background: var(--alert-soft); color: #a63a3a; }
+.badge.clay { background: var(--clay-soft); color: #9c563e; }
+.badge.mint { background: var(--accent-soft); color: #2c7d70; }
+
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-faint); display: inline-block; flex: none; box-shadow: inset 1px 1px 2px rgba(0,0,0,.18); }
+.dot.on { background: var(--ok); }
+
+/* Dialog */
+dialog {
+  border: none; border-radius: var(--radius-xl);
+  background: var(--surface); color: var(--text); padding: 22px;
+  width: min(92vw, 500px);
+  box-shadow: var(--clay-raised);
+}
+dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px); }
+.dlg-title { font-family: var(--font-display); font-size: 21px; font-weight: 600; margin: 0 0 12px; }
+.dlg-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+
+/* Toast */
+.ack {
+  position: fixed; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translateX(-50%);
+  background: var(--surface); color: var(--text);
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow: var(--clay-raised);
+  border-radius: var(--radius-lg); padding: 14px 22px; font-weight: 700; font-size: 16px;
+  z-index: 60; max-width: 92vw; text-align: center;
+  border-left: 6px solid var(--accent);
+}
+.ack.red { border-left-color: var(--alert); }
+
+/* ---------- Ambient background (medical: breathing glow + ECG) ---------- */
+
+.breath-bg {
+  position: fixed; inset: -18%; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(58% 48% at 72% 18%, rgba(63, 167, 150, .12), transparent 70%),
+    radial-gradient(52% 46% at 16% 88%, rgba(217, 134, 107, .10), transparent 70%),
+    radial-gradient(40% 40% at 45% 55%, rgba(63, 167, 150, .05), transparent 72%);
+  animation: breathe 7s ease-in-out infinite;
+  transform-origin: 55% 42%;
+  will-change: transform, opacity;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: .75; }
+  50% { transform: scale(1.08); opacity: 1; }
+}
+
+.ambient-canvas {
+  position: fixed; inset: 0; width: 100%; height: 100%;
+  z-index: -1; pointer-events: none;
+}
+
+/* ---------- Toast entrance ---------- */
+.ack { animation: toastin .28s cubic-bezier(.2, .9, .3, 1.2); }
+@keyframes toastin {
+  from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.92); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
