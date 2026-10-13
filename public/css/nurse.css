@@ -392,8 +392,236 @@
   box-shadow: var(--clay-sm);
 }
 
-/* Print board (kept from board.html design, used when printing from dashboard) */
+/* Print board */
 @media print {
   body { background: #fff; }
   .n-app, .n-top, .n-main, .gate, .p-app, dialog, .ack, .sr-only { display: none !important; }
 }
+
+/* Patient Status rail */
+.patient-status-rail {
+  position: fixed;
+  top: 0; left: 0;
+  bottom: 0;
+  width: min(320px, 82vw);
+  background: rgba(243, 241, 236, .94);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  z-index: 15;
+  gap: 10px;
+  padding: calc(10px + var(--safe-t)) 12px 12px;
+  box-shadow: var(--clay-shadow);
+  overflow-y: auto;
+}
+@media (max-width: 820px) {
+  .patient-status-rail {
+    position: static;
+    width: 100%;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    box-shadow: none;
+  }
+}
+.patient-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.patient-status-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: .02em;
+}
+.patient-status-summary {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-soft);
+  letter-spacing: .02em;
+  text-align: right;
+}
+.patient-status-list {
+  flex: 1;
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+}
+.patient-status-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 11px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,.62);
+  box-shadow: var(--clay-sm);
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+  position: relative;
+}
+.patient-status-item:hover {
+  border-color: var(--accent);
+  box-shadow: var(--clay-raised);
+}
+.patient-status-item.selected {
+  border-color: var(--accent);
+  background: linear-gradient(145deg, #f3faf8, #e3f1ec);
+  box-shadow: var(--clay-raised);
+}
+.patient-status-item .ps-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.patient-status-item .ps-name {
+  font-weight: 800;
+  font-size: 13.5px;
+  color: var(--text);
+  line-height: 1.2;
+  word-break: break-word;
+}
+.patient-status-item .ps-code {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  letter-spacing: .04em;
+}
+.patient-status-item .ps-bed {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-soft);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.patient-status-item .ps-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.7);
+  background: var(--text-faint);
+}
+.patient-status-item .ps-dot.on {
+  background: var(--ok);
+  box-shadow: 0 0 0 2px rgba(63, 167, 150, .25);
+}
+.patient-status-item .ps-stats {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.patient-status-item .ps-stat {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-soft);
+  letter-spacing: .02em;
+}
+.patient-status-item .ps-stat.emg-stat {
+  color: var(--alert);
+  background: var(--alert-soft);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.patient-status-item .ps-stat.unhandled-stat {
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.patient-status-item .ps-empty {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  font-weight: 600;
+  font-style: italic;
+}
+.patient-status-item .ps-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+.patient-status-item .ps-rm {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  transition: all .15s ease;
+}
+.patient-status-item .ps-rm:hover {
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+.patient-status-item .ps-view-feed {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  transition: all .15s ease;
+}
+.patient-status-item .ps-view-feed:hover {
+  background: var(--accent-soft);
+  color: #235f55;
+}
+.patient-status-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+.patient-status-hint {
+  font-size: 11.5px;
+  color: var(--text-soft);
+  font-weight: 600;
+  line-height: 1.4;
+}
+.patient-status-empty-state {
+  text-align: center;
+  padding: 28px 10px 18px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.patient-status-empty-state .ps-empty-strong {
+  color: var(--text-soft);
+  display: block;
+  font-weight: 700;
+  margin-top: 6px;
+}
+.ps-death-error {
+  color: var(--alert);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 4px;
+  font-style: normal;
+}
+
+/* Hide the old sidebar patient list container when the new rail is shown (dashboard keeps old sidebar as fallback) */
+#patientList.was-rail { display: none; }

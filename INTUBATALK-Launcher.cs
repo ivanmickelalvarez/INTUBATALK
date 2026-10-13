@@ -16,6 +16,7 @@ using System.Drawing.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.VisualBasic;
 
 namespace IntubaTalk
 {
@@ -780,7 +781,14 @@ namespace IntubaTalk
                 AccentColor = colTeal,
                 AccentDark = colTealDk,
                 IsPatientIcon = false,
-                OnSelect = delegate { LaunchApp("/nurse?fresh=1"); }
+                OnSelect = delegate {
+    string name = Microsoft.VisualBasic.Interaction.InputBox("Enter your name:", "Nurse Name", "");
+    if (!string.IsNullOrWhiteSpace(name)) {
+        LaunchApp($"/nurse?fresh=1&name={System.Net.WebUtility.UrlEncode(name)}");
+    } else {
+        LaunchApp("/nurse?fresh=1");
+    }
+};
             };
             cardNurse.BindData();
             roleGrid.Controls.Add(cardNurse, 1, 0);

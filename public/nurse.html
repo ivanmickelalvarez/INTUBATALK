@@ -7,6 +7,7 @@
 <title>INTUBATALK · Nurse Dashboard</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
     <div id="nurseProfileChip" class="nurse-chip hidden"></div>
     <span class="badge" id="codeTag">0 Beds</span>
     <span style="flex:1"></span>
-    <button class="btn btn-mint btn-sm" id="btnAddPatient"><span data-ic="plus"></span>Connect bed</button>
+    <button class="btn btn-mint btn-sm" id="btnAddPatient"><span data-ic="plus"></span>Add Patient</button>
     <button class="btn btn-ghost btn-sm" id="btnSwitchNurse"><span data-ic="repeat"></span>Switch nurse</button>
     <button class="btn btn-ghost btn-sm" id="btnTestSound"><span data-ic="speaker"></span>Test sound</button>
     <button class="btn btn-ghost btn-sm" id="btnMute"><span data-ic="mute"></span>Sound</button>
@@ -36,7 +37,7 @@
 
   <main class="n-main" id="main"></main>
 
-  <!-- Connect Bed Dialog (supports multiple patients) -->
+  <!-- Connect Bed Dialog -->
   <dialog id="dlgConnectBed" class="clay" style="max-width:520px">
     <h3 class="dlg-title">Connect Patient Beds</h3>
     <p style="color:var(--text-soft);font-size:14px;margin:0 0 14px;line-height:1.5">
@@ -84,6 +85,21 @@
       <button class="btn btn-ghost" id="btnCloseNurseDlg" type="button">Close</button>
     </div>
   </dialog>
+
+  <!-- Patient Status Rail -->
+  <aside id="patientStatusRail" class="patient-status-rail hidden" aria-label="Patient Status">
+    <div class="patient-status-head">
+      <h3>Patient Status</h3>
+      <span class="patient-status-summary" id="patientStatusSummary"></span>
+    </div>
+
+    <div class="patient-status-list" id="patientStatusList"></div>
+
+    <div class="patient-status-foot">
+      <div class="patient-status-hint">Live bedside status for every patient on this nurse's dashboard. Tap a patient to focus their requests.</div>
+      <button class="btn btn-ghost btn-sm" id="btnPatientStatusRefresh" type="button">Refresh statuses</button>
+    </div>
+  </aside>
 
   <div id="alarm" class="alarm-ov hidden" style="display:none"></div>
 </div>

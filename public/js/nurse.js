@@ -2,7 +2,7 @@
 // Multi-Nurse & Multi-Patient monitoring system with clinical Claymorphism UI.
 import { $, $$, esc, fmtClock, fmtAgo, loadJSON, saveJSON } from "./lib/util.js";
 import * as audio from "./lib/audio.js";
-import { speak, stopSpeech } from "./lib/tts.js";
+import { speak, stopSpeech, ttsAvailable, DEFAULT_VOICE_CHECK, talkActive } from "./lib/tts.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
 import * as sync from "./lib/sync.js";
@@ -16,6 +16,21 @@ const DEMO = "__demo__";
 
 // State
 let nurses = loadJSON(LS_NURSES, []);
+
+// ------------------------------------------------------------------ show patient status rail
+
+function showPatientStatusRail() {
+  const rail = $("#patientStatusRail");
+  if (!rail) return rail;
+  rail.classList.remove("hidden");
+  if ($("#patientList")) $("#patientList").classList.add("was-rail");
+  return rail;
+}
+
+function hidePatientStatusRail() {
+  const rail = $("#patientStatusRail");
+  if (rail) rail.classList.add("hidden");
+}
 let activeNurseId = localStorage.getItem(LS_ACTIVE_NURSE) || (nurses[0]?.id || null);
 let currentNurse = nurses.find((n) => n.id === activeNurseId) || null;
 
@@ -220,6 +235,10 @@ function renderDashboard() {
   if (!currentNurse) return renderJoin();
 
   updateTopBar();
+  renderPatientStatusRail();
+
+  renderPatientStatusRail();
+
   const el = $("#main");
   el.innerHTML = `
     <div class="n-cols">
@@ -332,6 +351,13 @@ function renderPatientList() {
   });
 
   $("#btnRailAddBed")?.addEventListener("click", openConnectDialog);
+  $("#btnPatientStatusRefresh")?.addEventListener("click", () => {
+    refreshPatientStatusList();
+    toastToast("Patient status refreshed.");
+  });
+  $("#btnAddPatient")?.addEventListener("click", () => {
+    // Keep legacy inline add if an old shell still references it
+  });
 }
 
 function renderPatientFilterBar() {
@@ -695,6 +721,142 @@ function openNurseProfileDialog() {
 
 // ------------------------------------------------------------------ emergency overlay
 
+function patientStatusFromRoom(code) {
+  // Internal helper: returns a read-only status snapshot for one room.
+  const p = patients[code] || { room: code, name: "Connecting...", bed: "", online: false };
+  const scoped = feed.filter((m) => m.room === code);
+  const unhandled = scoped.filter((m) => m.status === "new" || m.status === "ack").length;
+  const emg = scoped.some((m) => m.kind === "emergency" && m.status !== "done");
+  const acked = scoped.some((m) => m.status === "ack");
+  const doneCount = scoped.filter((m) => m.status === "done").length;
+  const lastActive = scoped.length ? scoped[0].ts : 0;
+  return {
+    room: code,
+    name: p.name || "Patient",
+    bed: p.bed || "",
+    online: !!p.online,
+    unhandled,
+    hasEmg: !!emg,
+    acked,
+    doneCount,
+    lastActive,
+    requestCount: scoped.length,
+  };
+}
+
+function refreshPatientStatusList() {
+  const list = $("#patientStatusList");
+  const summary = $("#patientStatusSummary");
+  const empty = $("#patientStatusEmpty");
+  if (!list) return;
+
+  const status = (rooms.length ? rooms : []).map((r) => patientStatusFromRoom(r));
+  const total = status.length;
+  const totalUnhandled = status.reduce((a, b) => a + b.unhandled, 0);
+  const totalEmg = status.reduce((a, b) => a + (b.hasEmg ? 1 : 0), 0);
+
+  if (!summary) return;
+  summary.textContent = `${total} patient${total === 1 ? "" : "s"} · ${totalUnhandled} open request${totalUnhandled === 1 ? "" : "s"}${totalEmg ? ` · ${totalEmg} emergency${totalEmg === 1 ? "" : "s"}` : ""}`;
+
+  if (total === 0) {
+    const current = list.innerHTML;
+    list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
+      No bedside patients connected.
+      <span class="ps-empty-strong">Tap \u201cAdd Patient\u201d in the top bar to monitor a bedside tablet.</span>
+    </div>`;
+    const btn = $("#btnRailAddBed");
+    if (btn) btn.click();
+    return;
+  }
+
+  if (empty) empty.remove();
+
+  list.innerHTML = status.map((s) => {
+    const isSelected = patientFilter === s.room;
+    const lastAgo = s.lastActive ? fmtAgo(s.lastActive) : "—";
+    return `
+      <div class="patient-status-item ${isSelected ? "selected" : ""}" data-room="${esc(s.room)}">
+        <div class="ps-top">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+            <div class="ps-name">${esc(s.name)}</div>
+            <div class="ps-code">Room ${esc(s.room)}${s.lastActive ? ` · last ${esc(lastAgo)}` : ""}</div>
+          </div>
+          <div class="ps-actions">
+            <button class="ps-view-feed" data-room="${esc(s.room)}" title="Show this patient's requests">${svg("check")}</button>
+            <button class="ps-rm" data-room="${esc(s.room)}" title="Disconnect bed">×</button>
+          </div>
+        </div>
+        <div class="ps-stats">
+          ${s.unhandled > 0 ? `<span class="ps-stat unhandled-stat">${s.unhandled} open</span>` : ""}
+          ${s.hasEmg ? `<span class="ps-stat emg-stat">EMERGENCY</span>` : ""}
+          ${s.acked ? `<span class="ps-stat">ACK</span>` : ""}
+          ${s.doneCount > 0 ? `<span class="ps-stat">${s.doneCount} handled</span>` : ""}
+          ${s.online ? `<span class="ps-stat">online</span>` : `<span class="ps-stat">offline</span>`}
+          ${s.bed ? `<span class="ps-stat">Bed ${esc(s.bed)}</span>` : ""}
+        </div>
+      </div>`;
+  }).join("");
+
+  $$(".patient-status-item", list).forEach((item) => {
+    item.addEventListener("click", (e) => {
+      if (e.target.closest(".ps-rm")) return;
+      if (e.target.closest(".ps-view-feed")) {
+        e.stopPropagation();
+        const r = e.target.closest(".patient-status-item").dataset.room;
+        patientFilter = patientFilter === r ? "all" : r;
+        renderPatientList();
+        renderPatientFilterBar();
+        renderFeed();
+        renderPatientStatusRail();
+        return;
+      }
+      const r = item.dataset.room;
+      patientFilter = (patientFilter === r) ? "all" : r;
+      renderPatientList();
+      renderPatientFilterBar();
+      renderFeed();
+      renderPatientStatusRail();
+    });
+  });
+
+  $$(".ps-rm", list).forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      disconnectBed(btn.dataset.room);
+    });
+  });
+
+  const viewFeedBtns = $$(".ps-view-feed", list);
+  viewFeedBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const r = btn.dataset.room;
+      patientFilter = patientFilter === r ? "all" : r;
+      renderPatientList();
+      renderPatientFilterBar();
+      renderFeed();
+      renderPatientStatusRail();
+    });
+  });
+}
+
+function renderPatientStatusRail() {
+  const rail = showPatientStatusRail();
+  if (rail) {
+    // Ensure empty container id exists for the render helper
+    const existing = $("#patientStatusEmpty");
+    if (!existing && !$("#patientStatusList")) {
+      const list = $("#patientStatusList");
+      if (list) list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
+        No bedside patients connected.
+        <span class="ps-empty-strong">Tap \u201cAdd Patient\u201d in the top bar to monitor a bedside tablet.</span>
+      </div>`;
+    }
+    refreshPatientStatusList();
+  }
+}
+
+// ------------------------------------------------------------------ emergency overlay
 function showAlarm(r) {
   const el = $("#alarm");
   el.style.display = "";
@@ -747,9 +909,9 @@ function wireDashboardButtons() {
     audio.setMuted(mute);
     $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound"}`;
     if (mute) { audio.alarmStop(); hideAlarm(); }
+    setInterval(() => { if (talkActive()) return; }, 3000);
   };
   $("#btnMute2") && ($("#btnMute2").onclick = () => $("#btnMute").click());
-
   $("#btnTestSound").onclick = () => {
     audio.unlock();
     audio.chime();
@@ -767,6 +929,51 @@ function wireDashboardButtons() {
 
   $("#btnAddPatient").onclick = openConnectDialog;
   $("#btnSwitchNurse").onclick = openNurseProfileDialog;
+
+  // Wire the same handlers under any alternate button ids a previous shell may have emitted.
+  $("#btnAddPatient2")?.onclick = openConnectDialog;
+  $("#btnSwitchNurse2")?.onclick = openNurseProfileDialog;
+  $("#btnAddPatient3")?.onclick = openConnectDialog;
+  $("#btnSwitchNurse3")?.onclick = openNurseProfileDialog;
+  $("#btnClearAll")?.onclick = () => {
+    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
+    persistFeed();
+    renderFeed();
+    renderPatientList();
+    renderPatientStatusRail();
+    toastToast("All marked handled");
+  };
+  $("#btnClearAll2")?.onclick = () => {
+    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
+    persistFeed();
+    renderFeed();
+    renderPatientList();
+    renderPatientStatusRail();
+    toastToast("All marked handled");
+  };
+  $("#btnClearFeed")?.onclick = () => {
+    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
+    persistFeed();
+    renderFeed();
+    renderPatientList();
+    renderPatientStatusRail();
+    toastToast("All marked handled");
+  };
+  $("#btnRefill")?.onclick = () => {
+    const id = msg.cmid || uid();
+    feed.unshift({
+      cmid: id, kind: "emergency", need: "emergency", label: "EMERGENCY / HELP",
+      msg: "I need help now.", risk: "high", patientName: "Demo Patient", bed: "10", room: DEMO,
+      ts: Date.now(), status: "new",
+    });
+    audio.alarmStart();
+    showAlarm(feed[0]);
+    persistFeed();
+    renderFeed();
+    renderPatientList();
+    renderPatientStatusRail();
+    toastToast("Demo emergency injected.");
+  };
 }
 
 let toastTimer = null;
@@ -823,6 +1030,7 @@ function onIncoming(msg) {
   persistFeed();
   renderFeed();
   renderPatientList();
+  renderPatientStatusRail();
   renderFilterBar();
 
   if (!mute) {
@@ -859,6 +1067,7 @@ function onAck(msg) {
   persistFeed();
   renderFeed();
   renderPatientList();
+  renderPatientStatusRail();
 }
 
 function onClear(msg) {
@@ -896,6 +1105,7 @@ function onProfilesUpdate(msg) {
   if (changed) {
     renderPatientList();
     renderPatientFilterBar();
+    renderPatientStatusRail();
   }
 }
 

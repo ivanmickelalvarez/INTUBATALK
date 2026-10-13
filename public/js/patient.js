@@ -32,6 +32,7 @@ async function startSession() {
   if (!name) return toast("Please enter the patient name first.", 2600);
   profile.name = name;
   profile.bed = bed;
+  profile.inSyncMode = profile.inSyncMode || true;
   sync.saveProfile(profile);
   audio.unlock();
   try {
@@ -51,8 +52,7 @@ function doEmergency() {
   audio.unlock();
   audio.alarmStart();
   flashScreen();
-  vibrate([120, 80, 120, 80, 240]);
-  speak("I need help now.", { rate: profile.slowTts ? 0.7 : 1 });
+  vibrate([120, 80, 120, 80, 240]);      speak("I need help now.", { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
   pendingEmg = sync.sendEmergency({ msg: "I need help now." });
   document.body.classList.add("emg-active");
   showEmgBanner();
@@ -160,6 +160,7 @@ function wireIncoming() {
     hideEmgBanner();
   });
   document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeech(); });
+  setInterval(() => { if (talkActive()) return; }, 3000);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       goHome();
@@ -322,7 +323,7 @@ function tileTap(key) {
     const label = key.slice(7);
     sync.sendNeed({ need: "custom", label, msg: `I need help with: ${label}.`, risk: "normal" });
     audio.chime(); vibrate(35);
-    speak(`I need help with: ${label}.`, { rate: profile.slowTts ? 0.7 : 1 });
+    speak(`I need help with: ${label}.`, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
     toast("Sent to the nurse.");
     return;
   }
@@ -331,7 +332,7 @@ function tileTap(key) {
   if (def.risk === "high") return openPanel(key);
   sync.sendNeed({ need: key, label: def.label, msg: def.msg, risk: "normal" });
   audio.chime(); vibrate(35);
-  speak(def.msg, { rate: profile.slowTts ? 0.7 : 1 });
+  speak(def.msg, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
   toast("Sent to the nurse.");
 }
 
@@ -375,7 +376,7 @@ function openPanel(kind) {
       const sev = pickedPain >= 7 ? "high" : "normal";
       sync.sendNeed({ need: "pain", label: "Pain", msg: `My pain level is ${pickedPain} out of 10.`, risk: sev });
       audio.chime(); vibrate(35);
-      speak(`My pain level is ${pickedPain} out of 10.`, { rate: profile.slowTts ? 0.7 : 1 });
+      speak(`My pain level is ${pickedPain} out of 10.`, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
       toast("Pain report sent.");
       goHome();
     });
@@ -402,11 +403,11 @@ function openPanel(kind) {
     $("#vSend").addEventListener("click", () => {
       sync.sendNeed({ need: kind, label: def.label, msg: chosen, risk: "high" });
       audio.chime(); vibrate(35);
-      speak(chosen, { rate: profile.slowTts ? 0.7 : 1 });
+      speak(chosen, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
       toast("Sent to the nurse.");
       goHome();
     });
-    $("#vSpeak").addEventListener("click", () => speak(chosen, { rate: profile.slowTts ? 0.7 : 1 }));
+    $("#vSpeak").addEventListener("click", () => speak(chosen, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) }));
     return wireBack();
   }
 
@@ -434,7 +435,7 @@ function openPanel(kind) {
       const t = ta.value.trim();
       if (!t) return toast("Write something first.");
       sync.sendNeed({ need: "message", label: "Message", msg: t });
-      speak(t, { rate: profile.slowTts ? 0.7 : 1 });
+      speak(t, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
       toast("Message sent.");
       goHome();
     });
@@ -468,7 +469,7 @@ function openPanel(kind) {
       const t = out.textContent.trim();
       if (!t) return toast("Spell something first.");
       sync.sendNeed({ need: "message", label: "Spelled", msg: t });
-      speak(t, { rate: profile.slowTts ? 0.7 : 1 });
+      speak(t, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
       toast("Message sent.");
       goHome();
     }, 2);
@@ -494,7 +495,7 @@ function openPanel(kind) {
       const el = $("#bQ");
       const spoken = answer === "yes" ? "The patient says yes." : answer === "no" ? "The patient says no." : "Waiting for a blink. The nurse will ask the question.";
       el.textContent = spoken;
-      if (answer) speak(spoken, { rate: profile.slowTts ? 0.75 : 1 });
+      if (answer) speak(spoken, { rate: (profile.inSyncMode ? 0.75 : 1) });
     };
     $("#bYes").addEventListener("click", () => {
       answer = "yes";
@@ -562,6 +563,7 @@ function openCaps() {
   $("#dSave", dlg).addEventListener("click", () => {
     profile.caps = [...sel];
     profile.slowTts = $("#slowTts").checked;
+    profile.inSyncMode = profile.inSyncMode || true;
     sync.saveProfile(profile);
     dlg.close();
     renderTop();
