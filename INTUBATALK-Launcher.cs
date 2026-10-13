@@ -311,8 +311,9 @@ namespace IntubaTalk
             }
 
             // ── 7. RECESSED CLAY WELL FOR FEATURES ──
-            int featBoxY = descY + 44;
-            int featBoxH = 145;
+            int featBoxY = descY + 40;
+            int maxFeatH = (_ctaBtn != null) ? Math.Max(110, _ctaBtn.Top - featBoxY - 14) : 145;
+            int featBoxH = maxFeatH;
             Rectangle featBox = new Rectangle(textX, featBoxY, cardBody.Width - 44, featBoxH);
 
             using (GraphicsPath fbp = GetRoundedPath(featBox, 16))
@@ -338,10 +339,11 @@ namespace IntubaTalk
                 }
             }
 
-            if (BulletPoints != null)
+            if (BulletPoints != null && BulletPoints.Length > 0)
             {
-                int py = featBoxY + 12;
-                using (Font fFeat = new Font("Segoe UI", 9.2f, FontStyle.Regular))
+                int py = featBoxY + 10;
+                int lineStep = Math.Min(30, (featBoxH - 20) / BulletPoints.Length);
+                using (Font fFeat = new Font("Segoe UI", 9.1f, FontStyle.Regular))
                 using (SolidBrush bFeat = new SolidBrush(Color.FromArgb(38, 51, 64)))
                 using (Pen pCheck = new Pen(AccentDark, 2.2f))
                 {
@@ -356,7 +358,7 @@ namespace IntubaTalk
                         g.DrawLine(pCheck, chkX + 4, chkY + 9, chkX + 11, chkY + 2);
 
                         g.DrawString(item, fFeat, bFeat, textX + 34, py);
-                        py += 30;
+                        py += lineStep;
                     }
                 }
             }
@@ -592,8 +594,8 @@ namespace IntubaTalk
         private void InitUI()
         {
             this.Text = "INTUBATALK · Choose Your Role";
-            this.Size = new Size(950, 720);
-            this.MinimumSize = new Size(840, 650);
+            this.Size = new Size(960, 740);
+            this.MinimumSize = new Size(880, 680);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = colBg;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -810,13 +812,13 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayPillButton btnWeb = new ClayPillButton { Text = "✨ Open Web View", Width = 150 };
+            ClayPillButton btnWeb = new ClayPillButton { Text = "✨ Web View", Width = 130 };
             btnWeb.Click += delegate { LaunchApp("/choose"); };
-            ClayPillButton btnDual = new ClayPillButton { Text = "👥 Dual Simulator", Width = 150 };
+            ClayPillButton btnDual = new ClayPillButton { Text = "👥 Dual Simulator", Width = 140 };
             btnDual.Click += delegate { LaunchApp("/dual"); };
-            ClayPillButton btnBoard = new ClayPillButton { Text = "📋 Backup Board", Width = 135 };
+            ClayPillButton btnBoard = new ClayPillButton { Text = "📋 Backup Board", Width = 130 };
             btnBoard.Click += delegate { LaunchApp("/board"); };
-            ClayPillButton btnWifi = new ClayPillButton { Text = "🌐 Wi-Fi Link", Width = 125 };
+            ClayPillButton btnWifi = new ClayPillButton { Text = "🌐 Wi-Fi Link", Width = 115 };
             btnWifi.Click += delegate { CopyLanUrl(); };
 
             flowLeft.Controls.Add(btnWeb);

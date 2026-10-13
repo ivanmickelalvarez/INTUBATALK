@@ -67,7 +67,11 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body {
+  margin: 0; padding: 0;
+  width: 100%;
+  overflow-x: hidden;
+}
 body {
   background: var(--bg);
   background-image:
@@ -189,8 +193,11 @@ img, svg { display: block; max-width: 100%; }
 /* Dialog */
 dialog {
   border: none; border-radius: var(--radius-xl);
-  background: var(--surface); color: var(--text); padding: 22px;
+  background: var(--surface); color: var(--text); padding: clamp(16px, 4vw, 24px);
   width: min(92vw, 500px);
+  max-height: 88vh;
+  max-height: 88dvh;
+  overflow-y: auto;
   box-shadow: var(--clay-raised);
 }
 dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px); }

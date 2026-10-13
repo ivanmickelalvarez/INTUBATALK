@@ -12,19 +12,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/base.css">
 <style>
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
 .chooser-wrap {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px 20px;
+  padding: calc(20px + var(--safe-t)) 20px calc(24px + var(--safe-b));
   max-width: 1040px;
   margin: 0 auto;
 }
 .chooser-header {
   text-align: center;
-  margin-top: 10px;
-  margin-bottom: 32px;
+  margin-top: 8px;
+  margin-bottom: 28px;
 }
 .brand-badge {
   display: inline-flex;
@@ -33,46 +42,49 @@
   margin-bottom: 8px;
 }
 .brand-mark-lg {
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   border-radius: 16px;
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 4px 6px 14px rgba(63, 167, 150, 0.28);
+  box-shadow: 4px 6px 14px rgba(63, 167, 150, 0.28), inset 1px 1px 2px rgba(255,255,255,0.45), inset -1px -2px 3px rgba(23,82,73,0.3);
+  flex-shrink: 0;
 }
 .brand-mark-lg svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   color: #fff;
 }
 .chooser-header h1 {
   font-family: var(--font-display);
-  font-size: 34px;
+  font-size: clamp(26px, 6.5vw, 34px);
   font-weight: 700;
   color: var(--text);
   margin: 0;
   letter-spacing: -0.01em;
+  line-height: 1.15;
 }
 .chooser-header p.tag {
   font-family: var(--font-display);
   font-style: italic;
-  font-size: 16.5px;
+  font-size: clamp(14px, 3.8vw, 16.5px);
   color: var(--text-soft);
-  margin: 6px 0 16px;
+  margin: 6px 0 14px;
+  line-height: 1.4;
 }
 .chooser-header p.sub {
-  font-size: 16px;
+  font-size: clamp(14.5px, 3.6vw, 16px);
   font-weight: 600;
   color: var(--text-faint);
   margin: 0;
 }
 .roles-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 @media (max-width: 760px) {
   .roles-grid {
@@ -82,20 +94,30 @@
 }
 .role-card {
   background: var(--surface);
-  border-radius: var(--radius-lg);
-  padding: 30px 28px;
-  box-shadow: var(--clay-shadow);
+  border-radius: var(--radius-xl);
+  padding: 28px 26px;
+  box-shadow:
+    10px 14px 28px rgba(103, 112, 108, 0.14),
+    -8px -8px 22px rgba(255, 255, 255, 0.95),
+    inset 1.5px 2px 3px rgba(255, 255, 255, 0.85),
+    inset -2px -3px 5px rgba(96, 99, 106, 0.08);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.1), box-shadow 0.18s ease;
   position: relative;
   overflow: hidden;
 }
-.role-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--clay-raised);
+@media (hover: hover) {
+  .role-card:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      14px 18px 36px rgba(103, 112, 108, 0.18),
+      -10px -10px 26px rgba(255, 255, 255, 1),
+      inset 2px 2px 4px rgba(255, 255, 255, 0.9),
+      inset -2px -3px 5px rgba(96, 99, 106, 0.1);
+  }
 }
 .role-card::before {
   content: "";
@@ -115,18 +137,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .role-badge {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 6px 14px;
+  padding: 5px 13px;
   border-radius: 999px;
+  box-shadow: var(--clay-sm);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 .badge-patient {
-  background: var(--accent-soft);
+  background: #daf1eb;
   color: #235f55;
 }
 .badge-nurse {
@@ -134,65 +158,75 @@
   color: #204b66;
 }
 .role-icon-circle {
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--clay-sm), inset 1px 1px 2px rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.8);
+  flex-shrink: 0;
 }
 .icon-circle-patient {
-  background: #e6f5f1;
+  background: linear-gradient(135deg, #e6f6f2, #daf0e9);
   color: var(--accent-deep);
 }
 .icon-circle-nurse {
-  background: #e6eff5;
+  background: linear-gradient(135deg, #eaf1f7, #dbe7f0);
   color: #2f6588;
 }
 .role-card h2 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: clamp(21px, 5vw, 24px);
   font-weight: 700;
   color: var(--text);
-  margin: 0 0 10px;
+  margin: 0 0 8px;
+  line-height: 1.2;
 }
 .role-card p.desc {
-  font-size: 15px;
+  font-size: 14.5px;
   line-height: 1.45;
   color: var(--text-soft);
-  margin: 0 0 20px;
-  min-height: 44px;
+  margin: 0 0 18px;
+  word-break: break-word;
 }
 .feature-list {
   background: var(--surface-2);
   border-radius: var(--radius-md);
   padding: 16px 18px;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   border: 1px solid var(--line);
+  box-shadow:
+    inset 3px 3px 7px rgba(103, 112, 108, 0.10),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.7);
 }
 .feature-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--text);
-  padding: 5px 0;
+  padding: 4px 0;
+  line-height: 1.35;
+  word-break: break-word;
 }
 .feature-item svg {
   width: 17px;
   height: 17px;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 .patient-card .feature-item svg { color: var(--accent-deep); }
 .nurse-card .feature-item svg { color: #2f6588; }
 .btn-role {
   width: 100%;
-  padding: 16px;
-  font-size: 17px;
+  padding: 15px 18px;
+  font-size: clamp(15.5px, 4.2vw, 17px);
   font-weight: 700;
-  border-radius: 14px;
+  border-radius: 16px;
   border: none;
   cursor: pointer;
   text-decoration: none;
@@ -200,33 +234,45 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  min-height: 52px;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .btn-role:active {
-  transform: translateY(1px);
+  transform: translateY(2px) scale(0.99);
 }
 .btn-patient-role {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    6px 8px 18px rgba(51, 138, 124, 0.32),
+    -4px -4px 10px rgba(255, 255, 255, 0.5),
+    inset 1px 2px 3px rgba(255, 255, 255, 0.45),
+    inset -1px -2px 4px rgba(23, 82, 73, 0.28);
 }
 .btn-patient-role:hover {
-  background: linear-gradient(135deg, #46b8a6 0%, #3a9686 100%);
-  box-shadow: 0 6px 16px rgba(63, 167, 150, 0.32);
+  filter: brightness(1.05);
 }
 .btn-nurse-role {
   background: linear-gradient(135deg, #3f7fa7 0%, #2f6588 100%);
   color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    6px 8px 18px rgba(47, 101, 136, 0.32),
+    -4px -4px 10px rgba(255, 255, 255, 0.5),
+    inset 1px 2px 3px rgba(255, 255, 255, 0.45),
+    inset -1px -2px 4px rgba(18, 56, 82, 0.28);
 }
 .btn-nurse-role:hover {
-  background: linear-gradient(135deg, #488ebd 0%, #367299 100%);
-  box-shadow: 0 6px 16px rgba(63, 127, 167, 0.32);
+  filter: brightness(1.05);
 }
 .chooser-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 18px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
   color: var(--text-soft);
@@ -235,21 +281,50 @@
 }
 .footer-links {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 .footer-link {
   color: var(--text-soft);
   text-decoration: none;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 7px 14px;
+  border-radius: 10px;
   background: var(--surface);
   border: 1px solid var(--line);
+  box-shadow: var(--clay-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
 }
 .footer-link:hover {
   color: var(--text);
   border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+@media (max-width: 560px) {
+  .chooser-wrap {
+    padding: calc(14px + var(--safe-t)) 14px calc(18px + var(--safe-b));
+  }
+  .role-card {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+  .chooser-footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+  .footer-links {
+    justify-content: center;
+    width: 100%;
+  }
+  .footer-link {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>
 </head>
