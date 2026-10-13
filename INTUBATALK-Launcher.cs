@@ -784,11 +784,11 @@ namespace IntubaTalk
                 OnSelect = delegate {
     string name = Microsoft.VisualBasic.Interaction.InputBox("Enter your name:", "Nurse Name", "");
     if (!string.IsNullOrWhiteSpace(name)) {
-        LaunchApp($"/nurse?fresh=1&name={System.Net.WebUtility.UrlEncode(name)}");
+        LaunchApp("/nurse?fresh=1&name=" + System.Net.WebUtility.UrlEncode(name));
     } else {
         LaunchApp("/nurse?fresh=1");
     }
-};
+}
             };
             cardNurse.BindData();
             roleGrid.Controls.Add(cardNurse, 1, 0);

@@ -23,13 +23,20 @@ function showPatientStatusRail() {
   const rail = $("#patientStatusRail");
   if (!rail) return rail;
   rail.classList.remove("hidden");
-  if ($("#patientList")) $("#patientList").classList.add("was-rail");
+  document.querySelector(".n-app")?.classList.add("has-rail");
+  const nurseEl = $("#patientStatusNurse");
+  if (nurseEl) {
+    nurseEl.textContent = currentNurse
+      ? `${currentNurse.name} · ${(currentNurse.rooms || []).length} patient${(currentNurse.rooms || []).length === 1 ? "" : "s"}`
+      : "";
+  }
   return rail;
 }
 
 function hidePatientStatusRail() {
   const rail = $("#patientStatusRail");
   if (rail) rail.classList.add("hidden");
+  document.querySelector(".n-app")?.classList.remove("has-rail");
 }
 let activeNurseId = localStorage.getItem(LS_ACTIVE_NURSE) || (nurses[0]?.id || null);
 let currentNurse = nurses.find((n) => n.id === activeNurseId) || null;
@@ -96,7 +103,11 @@ function selectNurse(nurseId) {
 }
 
 function createNurseStation(name, unit = "", initialRooms = []) {
-  const cleanName = String(name || "").trim().slice(0, 40) || "Staff Nurse, RN";
+  const cleanName = String(name || "").trim().slice(0, 40);
+  if (!cleanName) {
+    toastToast("Please enter your nurse name to sign in.");
+    return null;
+  }
   const cleanUnit = String(unit || "").trim().slice(0, 40) || "ICU Pod";
   const cleanRooms = Array.from(new Set(initialRooms.filter((r) => /^\d{4}$/.test(r))));
   const newId = `nurse_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
@@ -120,12 +131,14 @@ function createNurseStation(name, unit = "", initialRooms = []) {
   updateTopBar();
   renderDashboard();
   toastToast(`Welcome, ${cleanName}! Station ready.`);
+  return newNurse;
 }
 
 // ------------------------------------------------------------------ welcome / setup screen
 
 function renderJoin() {
   document.title = titleBase;
+  hidePatientStatusRail();
   $("#codeTag").innerHTML = "Setup";
   $("#nurseProfileChip").classList.add("hidden");
 
@@ -156,29 +169,28 @@ function renderJoin() {
         <a class="badge" href="/" style="padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;color:var(--text-soft)">👤 Switch to Patient Tablet →</a>
         <a class="badge" href="/dual" style="padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;color:var(--text-soft)">👥 Dual Simulator →</a>
       </nav>
-      <h1>Nurse Station Setup</h1>
-      <p class="hint">Configure your individual nurse dashboard. You can monitor multiple bedside patients simultaneously from this station.</p>
+      <h1>Nurse Sign In</h1>
+      <p class="hint">Every nurse signs in with their own name. Your name is shown on the dashboard and attached when you acknowledge a patient, so patients know who responded. One nurse can monitor several patients at once.</p>
       
       ${existingNursesHtml}
 
-      <form id="formNewNurse" style="display:grid;gap:14px">
+      <form id="formNewNurse" style="display:grid;gap:14px" novalidate>
         <div>
-          <label for="inNurseName" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Nurse Name / Title</label>
-          <input id="inNurseName" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%" placeholder="e.g. Nurse Sarah, RN" required>
+          <label for="inNurseName" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Nurse Name (required)</label>
+          <input id="inNurseName" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40" autocomplete="name">
         </div>
         <div>
           <label for="inNurseUnit" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Ward / Pod (Optional)</label>
-          <input id="inNurseUnit" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%" placeholder="e.g. ICU Pod A">
+          <input id="inNurseUnit" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. ICU Pod A" maxlength="40">
         </div>
         <div>
           <label for="inInitialRooms" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Bedside Room Code(s) <span style="font-weight:500">(Optional, comma-separated)</span></label>
           <input id="inInitialRooms" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;letter-spacing:2px;width:100%" placeholder="e.g. 1024, 2048">
-          <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can also add or connect more beds anytime from inside the dashboard.</small>
+          <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button.</small>
         </div>
         <div class="join-err hidden" id="errJoin"></div>
-        <button type="submit" class="btn btn-mint" style="padding:15px;font-size:17px;margin-top:4px">Start Nurse Dashboard</button>
+        <button type="submit" class="btn btn-mint" style="padding:15px;font-size:17px;margin-top:4px">Sign In & Open Dashboard</button>
       </form>
-      <button class="btn btn-ghost" id="btnDemo" style="font-size:13.5px;margin-top:6px">Quick Demo Mode (Single browser offline simulation)</button>
     </section>`;
 
   $$(".nurse-profile-card", $("#main")).forEach((card) => {
@@ -196,11 +208,14 @@ function renderJoin() {
       ? rawRooms.split(/[\s,]+/).map((r) => r.trim()).filter((r) => /^\d{4}$/.test(r))
       : [];
 
+    if (!name) {
+      const err = $("#errJoin");
+      err.classList.remove("hidden");
+      err.textContent = "Please enter your nurse name to sign in.";
+      $("#inNurseName").focus();
+      return;
+    }
     createNurseStation(name, unit, parsedRooms);
-  });
-
-  $("#btnDemo").addEventListener("click", () => {
-    createNurseStation("Demo Nurse, RN", "Demo Ward", [DEMO]);
   });
 }
 
@@ -219,14 +234,17 @@ function updateTopBar() {
     <div class="nurse-avatar" aria-hidden="true">👩‍⚕️</div>
     <div class="nurse-info">
       <span class="nurse-name">${esc(currentNurse.name)}</span>
-      <span class="nurse-unit">${esc(currentNurse.unit || "ICU")}</span>
+      <span class="nurse-unit">${esc(currentNurse.unit || "ICU")} · tap to switch</span>
     </div>
   `;
+  chip.title = `Signed in as ${currentNurse.name} — click to switch nurse`;
+  chip.style.cursor = "pointer";
+  chip.onclick = () => openNurseProfileDialog();
 
   const count = rooms.length;
   $("#codeTag").innerHTML = count === 0
-    ? `<span style="color:var(--text-faint)">No beds connected</span>`
-    : `<b>${count}</b> ${count === 1 ? "Bed" : "Beds"} Connected`;
+    ? `<span style="color:var(--text-faint)">No patients yet — tap “Add Patient”</span>`
+    : `<b>${count}</b> ${count === 1 ? "Patient" : "Patients"} Connected`;
 }
 
 // ------------------------------------------------------------------ dashboard render
@@ -235,9 +253,6 @@ function renderDashboard() {
   if (!currentNurse) return renderJoin();
 
   updateTopBar();
-  renderPatientStatusRail();
-
-  renderPatientStatusRail();
 
   const el = $("#main");
   el.innerHTML = `
@@ -264,10 +279,14 @@ function renderDashboard() {
       <aside class="rail">
         <div>
           <div class="patient-rail-head">
-            <h3>Assigned Beds (${rooms.length})</h3>
-            <button class="btn btn-ghost btn-sm" id="btnRailAddBed" style="padding:4px 8px;font-size:12px;font-weight:700">＋ Connect bed</button>
+            <h3>My Patients (${rooms.length})</h3>
+            <button class="btn btn-mint btn-sm" id="btnRailAddBed" style="padding:6px 10px;font-size:12.5px;font-weight:800">＋ Add Patient</button>
           </div>
-          <div class="patient-list" id="patientList"></div>
+          <div class="card" style="font-size:13px;color:var(--text-soft);line-height:1.55;padding:14px 15px">
+            <div><b style="color:var(--text)">${esc(currentNurse.name)}</b> is monitoring <b>${rooms.length} patient${rooms.length === 1 ? "" : "s"}</b>.</div>
+            <div style="margin-top:6px">Full live status for each patient is on the right-side <b>Patient Status</b> panel. Tap a patient there to focus their requests.</div>
+          </div>
+          <div class="patient-list" id="patientList" style="margin-top:10px"></div>
         </div>
 
         <div>
@@ -275,8 +294,8 @@ function renderDashboard() {
           <div class="card" style="font-size:13.5px;color:var(--text-soft);display:grid;gap:10px;line-height:1.5">
             <div><b style="color:#a63a3a">Red cards are emergencies.</b> Siren rings continuously until acknowledged.</div>
             <div><b style="color:#2c7d70">Mint stamp means fresh request.</b> Tap Acknowledge to notify the patient.</div>
-            <div><b>Multiple beds supported:</b> Each patient tablet displays its 4-digit code in the top bar.</div>
-            <div><b>Personalized response:</b> When you acknowledge, the patient's tablet displays your nurse name.</div>
+            <div><b>Add patients:</b> Use “Add Patient” in the top bar or the Patient Status panel. Enter each tablet's 4-digit code.</div>
+            <div><b>Personalized response:</b> When you acknowledge, the patient's tablet displays your name (${esc(currentNurse.name)}).</div>
           </div>
         </div>
       </aside>
@@ -287,6 +306,7 @@ function renderDashboard() {
   renderFilterBar();
   renderFeed();
   wireDashboardButtons();
+  renderPatientStatusRail();
 
   clearInterval(clockTimer);
   clockTimer = setInterval(renderClocks, 5000);
@@ -299,8 +319,8 @@ function renderPatientList() {
   if (!rooms.length) {
     el.innerHTML = `
       <div class="empty" style="border-radius:18px;padding:22px 14px">
-        No bedside tablets connected to <b>${esc(currentNurse.name)}</b>.<br>
-        <button class="btn btn-mint btn-sm" id="btnEmptyAddBed" style="margin-top:10px">＋ Connect a Patient Bed</button>
+        No patients on <b>${esc(currentNurse?.name || "this station")}</b>'s dashboard yet.<br>
+        <button class="btn btn-mint btn-sm" id="btnEmptyAddBed" style="margin-top:10px">＋ Add Patient</button>
       </div>`;
     $("#btnEmptyAddBed")?.addEventListener("click", openConnectDialog);
     return;
@@ -326,7 +346,7 @@ function renderPatientList() {
         </div>
         <div class="p-actions">
           ${unhandled > 0 ? `<span class="badge-count ${hasEmg ? "emg" : ""}">${unhandled}</span>` : ""}
-          <button class="btn-rm-patient" data-rm="${esc(rCode)}" title="Disconnect bed from this dashboard">×</button>
+          <button class="btn-rm-patient" data-rm="${esc(rCode)}" title="Remove patient from this dashboard">×</button>
         </div>
       </div>`;
   }).join("");
@@ -339,6 +359,7 @@ function renderPatientList() {
       renderPatientList();
       renderPatientFilterBar();
       renderFeed();
+      renderPatientStatusRail();
     });
   });
 
@@ -348,15 +369,6 @@ function renderPatientList() {
       const rCode = btn.dataset.rm;
       disconnectBed(rCode);
     });
-  });
-
-  $("#btnRailAddBed")?.addEventListener("click", openConnectDialog);
-  $("#btnPatientStatusRefresh")?.addEventListener("click", () => {
-    refreshPatientStatusList();
-    toastToast("Patient status refreshed.");
-  });
-  $("#btnAddPatient")?.addEventListener("click", () => {
-    // Keep legacy inline add if an old shell still references it
   });
 }
 
@@ -499,6 +511,7 @@ function renderFeed() {
         persistFeed();
         renderFeed();
         renderPatientList();
+        renderPatientStatusRail();
         toastToast(`Acknowledged to ${r.patientName || "patient"}`);
       } else if (act === "done") {
         r.status = "done";
@@ -506,6 +519,7 @@ function renderFeed() {
         persistFeed();
         renderFeed();
         renderPatientList();
+        renderPatientStatusRail();
       } else if (act === "speak") {
         speak(`${r.patientName || "Patient"} says: ${r.msg}`, { rate: 0.95 });
       }
@@ -532,12 +546,15 @@ const persistFeed = () => {
 // ------------------------------------------------------------------ connect & disconnect beds
 
 function openConnectDialog() {
+  if (!currentNurse) return renderJoin();
   const dlg = $("#dlgConnectBed");
   if (!dlg) return;
   const inRoom = $("#inNewRoom", dlg);
   const statusEl = $("#connectRoomStatus", dlg);
   const browseBtn = $("#btnBrowsePatients", dlg);
   const browseList = $("#browsePatientsList", dlg);
+  const targetEl = $("#connectNurseTarget", dlg);
+  if (targetEl) targetEl.textContent = `Adding to ${currentNurse.name}'s dashboard (${rooms.length} patient${rooms.length === 1 ? "" : "s"} connected).`;
   inRoom.value = "";
   statusEl.textContent = "";
   browseList.style.display = "none";
@@ -619,8 +636,8 @@ function openConnectDialog() {
     }
   };
 
-  dlg.showModal();
-  inRoom.focus();
+  if (!dlg.open) dlg.showModal();
+  try { inRoom.focus(); } catch { /* noop */ }
 }
 
 async function doConnectBed() {
@@ -670,11 +687,13 @@ async function doConnectBed() {
 
   updateTopBar();
   renderDashboard();
-  toastToast(`${newCodes.length} patient bed${newCodes.length > 1 ? "s" : ""} connected: ${newCodes.join(", ")}`);
+  toastToast(`${newCodes.length} patient${newCodes.length > 1 ? "s" : ""} added to ${currentNurse?.name || "dashboard"}: ${newCodes.join(", ")}`);
 }
 
 function disconnectBed(codeVal) {
-  if (!confirm(`Disconnect Bed (Room ${codeVal}) from ${currentNurse.name}'s dashboard?`)) return;
+  const p = patients[codeVal];
+  const label = p?.name ? `${p.name} (Room ${codeVal})` : `Room ${codeVal}`;
+  if (!confirm(`Remove ${label} from ${currentNurse?.name || "this nurse"}'s dashboard?`)) return;
 
   rooms = rooms.filter((r) => r !== codeVal);
   if (currentNurse) {
@@ -687,7 +706,7 @@ function disconnectBed(codeVal) {
   if (patientFilter === codeVal) patientFilter = "all";
   updateTopBar();
   renderDashboard();
-  toastToast(`Bed ${codeVal} disconnected.`);
+  toastToast(`${label} removed.`);
 }
 
 // ------------------------------------------------------------------ nurse profile dialog
@@ -716,7 +735,7 @@ function openNurseProfileDialog() {
     });
   });
 
-  dlg.showModal();
+  if (!dlg.open) dlg.showModal();
 }
 
 // ------------------------------------------------------------------ emergency overlay
@@ -747,75 +766,76 @@ function patientStatusFromRoom(code) {
 function refreshPatientStatusList() {
   const list = $("#patientStatusList");
   const summary = $("#patientStatusSummary");
-  const empty = $("#patientStatusEmpty");
-  if (!list) return;
+  if (!list || !summary) return;
 
   const status = (rooms.length ? rooms : []).map((r) => patientStatusFromRoom(r));
   const total = status.length;
   const totalUnhandled = status.reduce((a, b) => a + b.unhandled, 0);
   const totalEmg = status.reduce((a, b) => a + (b.hasEmg ? 1 : 0), 0);
 
-  if (!summary) return;
-  summary.textContent = `${total} patient${total === 1 ? "" : "s"} · ${totalUnhandled} open request${totalUnhandled === 1 ? "" : "s"}${totalEmg ? ` · ${totalEmg} emergency${totalEmg === 1 ? "" : "s"}` : ""}`;
+  summary.textContent = total === 0
+    ? "No patients yet"
+    : `${total} patient${total === 1 ? "" : "s"} · ${totalUnhandled} open${totalEmg ? ` · ${totalEmg} emergency${totalEmg === 1 ? "" : "s"}` : ""}`;
+
+  const nurseEl = $("#patientStatusNurse");
+  if (nurseEl) {
+    nurseEl.textContent = currentNurse
+      ? `${currentNurse.name} · tap a patient to focus`
+      : "";
+  }
 
   if (total === 0) {
-    const current = list.innerHTML;
     list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
-      No bedside patients connected.
-      <span class="ps-empty-strong">Tap \u201cAdd Patient\u201d in the top bar to monitor a bedside tablet.</span>
+      No patients on this dashboard yet.
+      <span class="ps-empty-strong">Tap “Add Patient” and enter a bedside tablet's 4-digit code.</span>
+      <button class="btn btn-mint btn-sm" id="btnStatusEmptyAdd" style="margin-top:12px;width:100%">＋ Add Patient</button>
     </div>`;
-    const btn = $("#btnRailAddBed");
-    if (btn) btn.click();
+    $("#btnStatusEmptyAdd")?.addEventListener("click", openConnectDialog);
     return;
   }
 
-  if (empty) empty.remove();
-
   list.innerHTML = status.map((s) => {
     const isSelected = patientFilter === s.room;
-    const lastAgo = s.lastActive ? fmtAgo(s.lastActive) : "—";
+    const lastAgo = s.lastActive ? fmtAgo(s.lastActive) : "no requests yet";
     return `
-      <div class="patient-status-item ${isSelected ? "selected" : ""}" data-room="${esc(s.room)}">
+      <div class="patient-status-item ${isSelected ? "selected" : ""} ${s.hasEmg ? "has-emg" : ""}" data-room="${esc(s.room)}" role="button" tabindex="0" aria-pressed="${isSelected ? "true" : "false"}" title="Tap to ${isSelected ? "show all patients" : `focus ${esc(s.name)}`}">
         <div class="ps-top">
           <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
-            <div class="ps-name">${esc(s.name)}</div>
-            <div class="ps-code">Room ${esc(s.room)}${s.lastActive ? ` · last ${esc(lastAgo)}` : ""}</div>
+            <div class="ps-name"><span class="ps-dot ${s.online ? "on" : ""}" title="${s.online ? "Online" : "Offline"}"></span>${esc(s.name)}${s.bed ? ` <span class="ps-bed">Bed ${esc(s.bed)}</span>` : ""}</div>
+            <div class="ps-code">Room ${esc(s.room)} · ${esc(lastAgo)}</div>
           </div>
           <div class="ps-actions">
-            <button class="ps-view-feed" data-room="${esc(s.room)}" title="Show this patient's requests">${svg("check")}</button>
-            <button class="ps-rm" data-room="${esc(s.room)}" title="Disconnect bed">×</button>
+            <button class="ps-rm" data-room="${esc(s.room)}" title="Remove ${esc(s.name)} from dashboard">×</button>
           </div>
         </div>
         <div class="ps-stats">
-          ${s.unhandled > 0 ? `<span class="ps-stat unhandled-stat">${s.unhandled} open</span>` : ""}
+          ${s.unhandled > 0 ? `<span class="ps-stat unhandled-stat">${s.unhandled} open</span>` : `<span class="ps-stat">all clear</span>`}
           ${s.hasEmg ? `<span class="ps-stat emg-stat">EMERGENCY</span>` : ""}
-          ${s.acked ? `<span class="ps-stat">ACK</span>` : ""}
+          ${s.acked ? `<span class="ps-stat">ACK sent</span>` : ""}
           ${s.doneCount > 0 ? `<span class="ps-stat">${s.doneCount} handled</span>` : ""}
-          ${s.online ? `<span class="ps-stat">online</span>` : `<span class="ps-stat">offline</span>`}
-          ${s.bed ? `<span class="ps-stat">Bed ${esc(s.bed)}</span>` : ""}
+          ${s.online ? `<span class="ps-stat">● online</span>` : `<span class="ps-stat">○ waiting</span>`}
         </div>
       </div>`;
   }).join("");
 
+  const focusRoom = (r) => {
+    patientFilter = (patientFilter === r) ? "all" : r;
+    renderPatientList();
+    renderPatientFilterBar();
+    renderFeed();
+    renderPatientStatusRail();
+  };
+
   $$(".patient-status-item", list).forEach((item) => {
     item.addEventListener("click", (e) => {
       if (e.target.closest(".ps-rm")) return;
-      if (e.target.closest(".ps-view-feed")) {
-        e.stopPropagation();
-        const r = e.target.closest(".patient-status-item").dataset.room;
-        patientFilter = patientFilter === r ? "all" : r;
-        renderPatientList();
-        renderPatientFilterBar();
-        renderFeed();
-        renderPatientStatusRail();
-        return;
+      focusRoom(item.dataset.room);
+    });
+    item.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        focusRoom(item.dataset.room);
       }
-      const r = item.dataset.room;
-      patientFilter = (patientFilter === r) ? "all" : r;
-      renderPatientList();
-      renderPatientFilterBar();
-      renderFeed();
-      renderPatientStatusRail();
     });
   });
 
@@ -825,35 +845,12 @@ function refreshPatientStatusList() {
       disconnectBed(btn.dataset.room);
     });
   });
-
-  const viewFeedBtns = $$(".ps-view-feed", list);
-  viewFeedBtns.forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const r = btn.dataset.room;
-      patientFilter = patientFilter === r ? "all" : r;
-      renderPatientList();
-      renderPatientFilterBar();
-      renderFeed();
-      renderPatientStatusRail();
-    });
-  });
 }
 
 function renderPatientStatusRail() {
-  const rail = showPatientStatusRail();
-  if (rail) {
-    // Ensure empty container id exists for the render helper
-    const existing = $("#patientStatusEmpty");
-    if (!existing && !$("#patientStatusList")) {
-      const list = $("#patientStatusList");
-      if (list) list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
-        No bedside patients connected.
-        <span class="ps-empty-strong">Tap \u201cAdd Patient\u201d in the top bar to monitor a bedside tablet.</span>
-      </div>`;
-    }
-    refreshPatientStatusList();
-  }
+  if (!currentNurse) return hidePatientStatusRail();
+  showPatientStatusRail();
+  refreshPatientStatusList();
 }
 
 // ------------------------------------------------------------------ emergency overlay
@@ -903,76 +900,26 @@ const hideAlarm = () => {
 // ------------------------------------------------------------------ buttons wire
 
 function wireDashboardButtons() {
-  $("#btnMute").onclick = () => {
-    mute = !mute;
-    saveJSON(LS_MUTE, mute);
-    audio.setMuted(mute);
-    $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound"}`;
-    if (mute) { audio.alarmStop(); hideAlarm(); }
-    setInterval(() => { if (talkActive()) return; }, 3000);
-  };
   $("#btnMute2") && ($("#btnMute2").onclick = () => $("#btnMute").click());
-  $("#btnTestSound").onclick = () => {
-    audio.unlock();
-    audio.chime();
-    speak("Nurse dashboard alert sound test.");
-    toastToast("Audio alert tested.");
-  };
 
   $("#btnClearAll") && ($("#btnClearAll").onclick = () => {
     feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
     persistFeed();
     renderFeed();
     renderPatientList();
+    renderPatientStatusRail();
     toastToast("All marked handled");
   });
 
-  $("#btnAddPatient").onclick = openConnectDialog;
-  $("#btnSwitchNurse").onclick = openNurseProfileDialog;
-
-  // Wire the same handlers under any alternate button ids a previous shell may have emitted.
-  $("#btnAddPatient2")?.onclick = openConnectDialog;
-  $("#btnSwitchNurse2")?.onclick = openNurseProfileDialog;
-  $("#btnAddPatient3")?.onclick = openConnectDialog;
-  $("#btnSwitchNurse3")?.onclick = openNurseProfileDialog;
-  $("#btnClearAll")?.onclick = () => {
-    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
-    persistFeed();
-    renderFeed();
-    renderPatientList();
-    renderPatientStatusRail();
-    toastToast("All marked handled");
-  };
-  $("#btnClearAll2")?.onclick = () => {
-    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
-    persistFeed();
-    renderFeed();
-    renderPatientList();
-    renderPatientStatusRail();
-    toastToast("All marked handled");
-  };
-  $("#btnClearFeed")?.onclick = () => {
-    feed.forEach((r) => { if (r.status !== "done") r.status = "done"; });
-    persistFeed();
-    renderFeed();
-    renderPatientList();
-    renderPatientStatusRail();
-    toastToast("All marked handled");
-  };
-  $("#btnRefill")?.onclick = () => {
-    const id = msg.cmid || uid();
-    feed.unshift({
-      cmid: id, kind: "emergency", need: "emergency", label: "EMERGENCY / HELP",
-      msg: "I need help now.", risk: "high", patientName: "Demo Patient", bed: "10", room: DEMO,
-      ts: Date.now(), status: "new",
-    });
-    audio.alarmStart();
-    showAlarm(feed[0]);
-    persistFeed();
-    renderFeed();
-    renderPatientList();
-    renderPatientStatusRail();
-    toastToast("Demo emergency injected.");
+  // “Add Patient” entry points: top bar persists (onclick), rails re-render (onclick resets safely)
+  const railAdd = $("#btnRailAddBed");
+  if (railAdd) railAdd.onclick = openConnectDialog;
+  const statusAdd = $("#btnPatientStatusAdd");
+  if (statusAdd) statusAdd.onclick = openConnectDialog;
+  const statusRefresh = $("#btnPatientStatusRefresh");
+  if (statusRefresh) statusRefresh.onclick = () => {
+    refreshPatientStatusList();
+    toastToast("Patient statuses refreshed.");
   };
 }
 
@@ -1144,11 +1091,35 @@ $("#inNewRoom")?.addEventListener("keydown", (e) => { if (e.key === "Enter") doC
 
 $("#btnCloseNurseDlg")?.addEventListener("click", () => $("#dlgNurseProfile")?.close());
 $("#btnCreateNurseProfile")?.addEventListener("click", () => {
-  const name = $("#inNurseNameNew").value.trim();
+  const nameEl = $("#inNurseNameNew");
+  const name = nameEl.value.trim();
   const unit = $("#inNurseUnitNew").value.trim();
-  if (!name) return toastToast("Please enter a nurse name.");
-  createNurseStation(name, unit, []);
-  $("#dlgNurseProfile")?.close();
+  if (!name) {
+    toastToast("Please enter your nurse name to create a station.");
+    nameEl.focus();
+    return;
+  }
+  const created = createNurseStation(name, unit, []);
+  if (created) $("#dlgNurseProfile")?.close();
+});
+
+// Persistent top-bar buttons (these live outside #main, so wire once)
+$("#btnAddPatient")?.addEventListener("click", openConnectDialog);
+$("#btnSwitchNurse")?.addEventListener("click", openNurseProfileDialog);
+$("#btnMute")?.addEventListener("click", () => {
+  mute = !mute;
+  saveJSON(LS_MUTE, mute);
+  audio.setMuted(mute);
+  $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound"}`;
+  const m2 = $("#btnMute2");
+  if (m2) m2.innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound on"}`;
+  if (mute) { audio.alarmStop(); hideAlarm(); }
+});
+$("#btnTestSound")?.addEventListener("click", () => {
+  audio.unlock();
+  audio.chime();
+  speak("Nurse dashboard alert sound test.");
+  toastToast("Audio alert tested.");
 });
 
 // Hydrate static SVGs
