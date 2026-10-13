@@ -3,6 +3,7 @@
   "cleanUrls": true,
   "rewrites": [
     { "source": "/", "destination": "/public/index.html" },
+    { "source": "/choose", "destination": "/public/choose.html" },
     { "source": "/nurse", "destination": "/public/nurse.html" },
     { "source": "/board", "destination": "/public/board.html" },
     { "source": "/dual", "destination": "/public/dual.html" },

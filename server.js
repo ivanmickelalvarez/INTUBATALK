@@ -253,6 +253,7 @@ async function handleApi(req, res, pathname) {
 function serveStatic(req, res, pathname) {
   let cleanPath = pathname;
   if (cleanPath === "/" || cleanPath === "") cleanPath = "/index.html";
+  else if (cleanPath === "/choose") cleanPath = "/choose.html";
   else if (cleanPath === "/nurse") cleanPath = "/nurse.html";
   else if (cleanPath === "/board") cleanPath = "/board.html";
   else if (cleanPath === "/dual") cleanPath = "/dual.html";

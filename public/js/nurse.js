@@ -426,6 +426,14 @@ sync.on("profile", onProfileUpdate);
 
 document.addEventListener("click", () => audio.unlock(), { once: true });
 
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("fresh") === "1" || urlParams.get("reset") === "1") {
+  sync.clearSession();
+  code = null;
+  feed = [];
+  try { sessionStorage.clear(); } catch { /* noop */ }
+}
+
 if (!("Notification" in window)) $("#btnNotify").disabled = true;
 $("#btnNotify").addEventListener("click", async () => {
   if (!("Notification" in window)) return;

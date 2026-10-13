@@ -185,6 +185,12 @@ function renderTop() {
 function wireTopButtons() {
   $("#btnCapsTop").addEventListener("click", openCaps);
   $("#btnBoard").addEventListener("click", () => window.open("/board", "_blank"));
+  $("#btnStartOver")?.addEventListener("click", () => {
+    if (confirm("Start a new patient session from the beginning?")) {
+      sync.clearSession();
+      window.location.href = "/?fresh=1";
+    }
+  });
   $("#btnDial").addEventListener("click", () => {
     audio.unlock();
     sync.sendNeed({
@@ -604,7 +610,16 @@ document.addEventListener("click", () => audio.unlock(), { once: true });
 hydrateIcons();
 startAmbient();
 
-if (profile.name && sync.getRememberedRoom()) {
+const urlParams = new URLSearchParams(window.location.search);
+const isFresh = urlParams.get("fresh") === "1" || urlParams.get("reset") === "1";
+
+if (isFresh) {
+  sync.clearSession();
+  profile = { ...DEFAULT_PROFILE };
+  room = null;
+}
+
+if (!isFresh && profile.name && sync.getRememberedRoom()) {
   (async () => {
     try { room = await sync.register({ name: profile.name, bed: profile.bed }); }
     catch { room = sync.getRememberedRoom(); }
@@ -612,6 +627,8 @@ if (profile.name && sync.getRememberedRoom()) {
   })();
 } else {
   $("#wizard").classList.remove("hidden");
+  if ($("#inName")) $("#inName").value = "";
+  if ($("#inBed")) $("#inBed").value = "";
   $("#btnCreate").addEventListener("click", startSession);
   $("#gateForm").addEventListener("submit", (e) => { e.preventDefault(); startSession(); });
   $("#inName").addEventListener("keydown", (e) => { if (e.key === "Enter") startSession(); });

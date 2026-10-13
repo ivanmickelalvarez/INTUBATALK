@@ -1,8 +1,8 @@
 // INTUBATALK Windows Desktop Application & Role Chooser
 // Native Windows executable compiled with C# (.NET Framework 4.x).
-// Provides an accessible role selection screen matching the web app's
-// "Clinical Claymorphism" design system — warm beige bg, raised clay cards
-// with dual shadows, mint/teal gradient buttons, serif display type.
+// Designed with Clinical Claymorphism — warm hospital palette, soft raised cards,
+// dual shadows, clean vector icons, and clear buttons to select between roles.
+// Ensures every session starts fresh from the very beginning.
 
 using System;
 using System.IO;
@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using System.Drawing.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
@@ -29,8 +30,8 @@ namespace IntubaTalk
 
             foreach (string arg in args)
             {
-                if (arg.Equals("--patient", StringComparison.OrdinalIgnoreCase)) initialRoute = "/";
-                else if (arg.Equals("--nurse", StringComparison.OrdinalIgnoreCase)) initialRoute = "/nurse";
+                if (arg.Equals("--patient", StringComparison.OrdinalIgnoreCase)) initialRoute = "/?fresh=1";
+                else if (arg.Equals("--nurse", StringComparison.OrdinalIgnoreCase)) initialRoute = "/nurse?fresh=1";
                 else if (arg.Equals("--dual", StringComparison.OrdinalIgnoreCase)) initialRoute = "/dual";
                 else if (arg.Equals("--board", StringComparison.OrdinalIgnoreCase)) initialRoute = "/board";
                 else if (arg.Equals("--tray", StringComparison.OrdinalIgnoreCase)) startInTray = true;
@@ -41,31 +42,54 @@ namespace IntubaTalk
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  Custom owner-drawn panel that renders a claymorphism card
-    //  with rounded corners and soft dual (light+dark) shadows.
+    //  ClayRoleCard: An interactive, owner-drawn claymorphic role card
+    //  featuring soft dual shadows, custom vector icons, clear descriptions,
+    //  and a large, accessible CTA button.
     // ─────────────────────────────────────────────────────────────────
-    public class ClayPanel : Panel
+    public class ClayRoleCard : Panel
     {
-        public int Radius { get; set; }
-        public Color FillColor { get; set; }
+        public string RoleBadge { get; set; }
+        public Color BadgeBg { get; set; }
+        public Color BadgeText { get; set; }
+        public string RoleTitle { get; set; }
+        public string RoleSubtitle { get; set; }
+        public string[] BulletPoints { get; set; }
+        public string ButtonText { get; set; }
         public Color AccentColor { get; set; }
-        public bool ShowAccentBar { get; set; }
-        private bool _hover = false;
+        public Color AccentDark { get; set; }
+        public bool IsPatientIcon { get; set; }
+        public Action OnSelect { get; set; }
 
-        public ClayPanel()
+        private bool _cardHover = false;
+        private GradientButton _ctaBtn;
+
+        public ClayRoleCard()
         {
-            Radius = 22;
-            FillColor = Color.FromArgb(248, 247, 244);
-            AccentColor = Color.Transparent;
-            ShowAccentBar = false;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
-            Padding = new Padding(24, 20, 24, 18);
+            Padding = new Padding(24, 22, 24, 20);
+
+            _ctaBtn = new GradientButton();
+            _ctaBtn.Height = 54;
+            _ctaBtn.Dock = DockStyle.Bottom;
+            _ctaBtn.Click += delegate { if (OnSelect != null) OnSelect(); };
+            this.Controls.Add(_ctaBtn);
         }
 
-        private GraphicsPath RoundedRect(Rectangle r, int rad)
+        public void BindData()
+        {
+            if (_ctaBtn != null)
+            {
+                _ctaBtn.Text = ButtonText;
+                _ctaBtn.GradFrom = AccentColor;
+                _ctaBtn.GradTo = AccentDark;
+            }
+            Invalidate();
+        }
+
+        private GraphicsPath GetRoundedPath(Rectangle r, int rad)
         {
             GraphicsPath gp = new GraphicsPath();
             int d = rad * 2;
@@ -79,14 +103,14 @@ namespace IntubaTalk
 
         protected override void OnMouseEnter(EventArgs e)
         {
-            _hover = true;
+            _cardHover = true;
             Invalidate();
             base.OnMouseEnter(e);
         }
 
         protected override void OnMouseLeave(EventArgs e)
         {
-            _hover = false;
+            _cardHover = false;
             Invalidate();
             base.OnMouseLeave(e);
         }
@@ -95,66 +119,193 @@ namespace IntubaTalk
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle body = new Rectangle(12, 10, Width - 24, Height - 22);
+            Rectangle cardBody = new Rectangle(12, 10, Width - 24, Height - 22);
+            int rad = 22;
 
-            // Dark shadow (bottom-right)
-            Rectangle shadowDark = new Rectangle(body.X + 6, body.Y + 7, body.Width, body.Height);
-            using (GraphicsPath sp = RoundedRect(shadowDark, Radius))
-            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_hover ? 38 : 30, 103, 112, 108)))
+            // 1. Dual clay shadows
+            // Dark shadow bottom-right
+            Rectangle darkShadow = new Rectangle(cardBody.X + 5, cardBody.Y + 6, cardBody.Width, cardBody.Height);
+            using (GraphicsPath sp = GetRoundedPath(darkShadow, rad))
+            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_cardHover ? 36 : 26, 103, 112, 108)))
             {
                 g.FillPath(sb, sp);
             }
 
-            // Light shadow (top-left)
-            Rectangle shadowLight = new Rectangle(body.X - 5, body.Y - 5, body.Width, body.Height);
-            using (GraphicsPath sp = RoundedRect(shadowLight, Radius))
-            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_hover ? 200 : 180, 255, 255, 255)))
+            // Light highlight shadow top-left
+            Rectangle lightShadow = new Rectangle(cardBody.X - 4, cardBody.Y - 4, cardBody.Width, cardBody.Height);
+            using (GraphicsPath sp = GetRoundedPath(lightShadow, rad))
+            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_cardHover ? 210 : 190, 255, 255, 255)))
             {
                 g.FillPath(sb, sp);
             }
 
-            // Main body fill
-            using (GraphicsPath gp = RoundedRect(body, Radius))
+            // 2. Card surface fill
+            using (GraphicsPath cp = GetRoundedPath(cardBody, rad))
             {
-                using (SolidBrush fb = new SolidBrush(FillColor))
+                using (SolidBrush fb = new SolidBrush(Color.FromArgb(248, 247, 244)))
                 {
-                    g.FillPath(fb, gp);
+                    g.FillPath(fb, cp);
                 }
 
-                // Inset highlight (top-left inner edge)
-                using (Pen pHighlight = new Pen(Color.FromArgb(140, 255, 255, 255), 1.5f))
+                // Inset light highlight
+                using (Pen pHi = new Pen(Color.FromArgb(180, 255, 255, 255), 1.5f))
                 {
-                    g.DrawPath(pHighlight, gp);
+                    g.DrawPath(pHi, cp);
                 }
             }
 
-            // Inner subtle border
-            Rectangle innerRect = new Rectangle(body.X + 1, body.Y + 1, body.Width - 2, body.Height - 2);
-            using (GraphicsPath ip = RoundedRect(innerRect, Radius - 1))
-            using (Pen pInner = new Pen(Color.FromArgb(30, 96, 99, 106), 1f))
+            // Subtle outer border
+            using (GraphicsPath cp = GetRoundedPath(cardBody, rad))
+            using (Pen pBorder = new Pen(Color.FromArgb(32, 96, 99, 106), 1f))
             {
-                g.DrawPath(pInner, ip);
+                g.DrawPath(pBorder, cp);
             }
 
-            // Accent bar at top
-            if (ShowAccentBar && AccentColor != Color.Transparent)
+            // 3. Top accent bar
+            Rectangle topBarRect = new Rectangle(cardBody.X, cardBody.Y, cardBody.Width, rad + 4);
+            using (GraphicsPath fullPath = GetRoundedPath(cardBody, rad))
             {
-                Rectangle barClip = new Rectangle(body.X, body.Y, body.Width, Radius + 6);
-                using (GraphicsPath fullPath = RoundedRect(body, Radius))
+                Region oldClip = g.Clip;
+                g.SetClip(topBarRect);
+                g.IntersectClip(new Region(fullPath));
+                using (LinearGradientBrush lb = new LinearGradientBrush(
+                    new Rectangle(cardBody.X, cardBody.Y, cardBody.Width, 6), AccentColor, AccentDark, 0f))
                 {
-                    Region oldClip = g.Clip;
-                    g.SetClip(barClip);
-                    g.IntersectClip(new Region(fullPath));
+                    g.FillRectangle(lb, cardBody.X, cardBody.Y, cardBody.Width, 6);
+                }
+                g.Clip = oldClip;
+            }
 
-                    Color accentEnd = ControlPaint.Dark(AccentColor, 0.15f);
-                    using (LinearGradientBrush lb = new LinearGradientBrush(
-                        new Rectangle(body.X, body.Y, body.Width, 7), AccentColor, accentEnd, 0f))
+            // 4. Role Badge (Pill)
+            int badgeX = cardBody.X + 22;
+            int badgeY = cardBody.Y + 20;
+            using (Font fBadge = new Font("Segoe UI", 8.2f, FontStyle.Bold))
+            {
+                SizeF bSize = g.MeasureString(RoleBadge ?? "", fBadge);
+                int bWidth = (int)bSize.Width + 18;
+                int bHeight = 24;
+                Rectangle bRect = new Rectangle(badgeX, badgeY, bWidth, bHeight);
+                using (GraphicsPath bp = GetRoundedPath(bRect, 12))
+                using (SolidBrush bb = new SolidBrush(BadgeBg))
+                {
+                    g.FillPath(bb, bp);
+                }
+                using (SolidBrush tb = new SolidBrush(BadgeText))
+                {
+                    StringFormat sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                    g.DrawString(RoleBadge ?? "", fBadge, tb, bRect, sf);
+                }
+            }
+
+            // 5. Custom Vector Icon in rounded circle
+            int iconBoxX = cardBody.X + 22;
+            int iconBoxY = cardBody.Y + 54;
+            int iconBoxSize = 50;
+            Rectangle iconBox = new Rectangle(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
+            using (GraphicsPath ip = GetRoundedPath(iconBox, 16))
+            using (SolidBrush ib = new SolidBrush(IsPatientIcon ? Color.FromArgb(230, 245, 241) : Color.FromArgb(230, 239, 245)))
+            {
+                g.FillPath(ib, ip);
+            }
+
+            // Draw crisp vector icon inside iconBox
+            int icx = iconBoxX + iconBoxSize / 2;
+            int icy = iconBoxY + iconBoxSize / 2;
+
+            if (IsPatientIcon)
+            {
+                // Vector Patient Bed icon
+                using (Pen pen = new Pen(AccentDark, 2.2f))
+                {
+                    pen.StartCap = LineCap.Round;
+                    pen.EndCap = LineCap.Round;
+                    // Head/pillow circle
+                    g.DrawEllipse(pen, icx - 14, icy - 8, 8, 8);
+                    // Bed horizontal mattress
+                    g.DrawLine(pen, icx - 16, icy + 6, icx + 16, icy + 6);
+                    // Headboard
+                    g.DrawLine(pen, icx - 16, icy - 2, icx - 16, icy + 12);
+                    // Footboard
+                    g.DrawLine(pen, icx + 16, icy + 2, icx + 16, icy + 12);
+                    // Patient blanket curve
+                    g.DrawArc(pen, icx - 6, icy - 4, 16, 10, 180, 180);
+                }
+            }
+            else
+            {
+                // Vector Medical Stethoscope / Cross icon
+                using (Pen pen = new Pen(AccentDark, 2.2f))
+                {
+                    pen.StartCap = LineCap.Round;
+                    pen.EndCap = LineCap.Round;
+                    // Medical Cross emblem
+                    g.DrawLine(pen, icx, icy - 13, icx, icy + 13);
+                    g.DrawLine(pen, icx - 13, icy, icx + 13, icy);
+                    // Surrounding subtle circular bracket
+                    g.DrawArc(pen, icx - 15, icy - 15, 30, 30, 45, 90);
+                    g.DrawArc(pen, icx - 15, icy - 15, 30, 30, 225, 90);
+                }
+            }
+
+            // 6. Title and Subtitle
+            int textX = cardBody.X + 22;
+            int titleY = iconBoxY + iconBoxSize + 14;
+
+            using (Font fTitle = new Font("Georgia", 16.5f, FontStyle.Bold))
+            using (SolidBrush bTitle = new SolidBrush(Color.FromArgb(38, 51, 64)))
+            {
+                g.DrawString(RoleTitle ?? "", fTitle, bTitle, textX, titleY);
+            }
+
+            int descY = titleY + 30;
+            Rectangle descRect = new Rectangle(textX, descY, cardBody.Width - 44, 40);
+            using (Font fDesc = new Font("Segoe UI", 9.5f, FontStyle.Regular))
+            using (SolidBrush bDesc = new SolidBrush(Color.FromArgb(93, 108, 120)))
+            {
+                StringFormat sfDesc = new StringFormat { Trimming = StringTrimming.Word };
+                g.DrawString(RoleSubtitle ?? "", fDesc, bDesc, descRect, sfDesc);
+            }
+
+            // 7. Bullet Feature Box
+            int featBoxY = descY + 44;
+            int featBoxH = 145;
+            Rectangle featBox = new Rectangle(textX, featBoxY, cardBody.Width - 44, featBoxH);
+
+            using (GraphicsPath fbp = GetRoundedPath(featBox, 14))
+            using (SolidBrush fbb = new SolidBrush(Color.FromArgb(244, 243, 239)))
+            {
+                g.FillPath(fbb, fbp);
+                using (Pen fp = new Pen(Color.FromArgb(226, 221, 212), 1f))
+                {
+                    g.DrawPath(fp, fbp);
+                }
+            }
+
+            if (BulletPoints != null)
+            {
+                int py = featBoxY + 12;
+                using (Font fFeat = new Font("Segoe UI", 9.2f, FontStyle.Regular))
+                using (SolidBrush bFeat = new SolidBrush(Color.FromArgb(38, 51, 64)))
+                using (SolidBrush bCheck = new SolidBrush(AccentDark))
+                using (Pen pCheck = new Pen(AccentDark, 2f))
+                {
+                    pCheck.StartCap = LineCap.Round;
+                    pCheck.EndCap = LineCap.Round;
+
+                    foreach (string item in BulletPoints)
                     {
-                        g.FillRectangle(lb, body.X, body.Y, body.Width, 7);
-                    }
+                        // Draw clean mini vector checkmark
+                        int chkX = textX + 16;
+                        int chkY = py + 4;
+                        g.DrawLine(pCheck, chkX, chkY + 5, chkX + 4, chkY + 9);
+                        g.DrawLine(pCheck, chkX + 4, chkY + 9, chkX + 11, chkY + 2);
 
-                    g.Clip = oldClip;
+                        // Draw text
+                        g.DrawString(item, fFeat, bFeat, textX + 34, py);
+                        py += 30;
+                    }
                 }
             }
 
@@ -163,7 +314,8 @@ namespace IntubaTalk
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  Custom gradient button with rounded corners for CTA actions.
+    //  GradientButton: Large, friendly pill button with rounded corners,
+    //  gradient fill, and smooth hover/press states.
     // ─────────────────────────────────────────────────────────────────
     public class GradientButton : Button
     {
@@ -175,9 +327,9 @@ namespace IntubaTalk
 
         public GradientButton()
         {
-            GradFrom = Color.FromArgb(76, 177, 160);
-            GradTo = Color.FromArgb(56, 147, 127);
-            Radius = 14;
+            GradFrom = Color.FromArgb(63, 167, 150);
+            GradTo = Color.FromArgb(51, 138, 124);
+            Radius = 16;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
             FlatStyle = FlatStyle.Flat;
@@ -187,7 +339,7 @@ namespace IntubaTalk
             Font = new Font("Segoe UI", 12f, FontStyle.Bold);
         }
 
-        private GraphicsPath RoundedRect(Rectangle r, int rad)
+        private GraphicsPath GetRoundedPath(Rectangle r, int rad)
         {
             GraphicsPath gp = new GraphicsPath();
             int d = rad * 2;
@@ -208,16 +360,17 @@ namespace IntubaTalk
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.Clear(Parent != null ? Parent.BackColor : Color.Transparent);
 
             Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
 
-            // Shadow behind button
+            // Subtle drop shadow behind button when not pressed
             if (!_pressed)
             {
-                Rectangle shadowR = new Rectangle(r.X + 3, r.Y + 4, r.Width, r.Height);
-                using (GraphicsPath sp = RoundedRect(shadowR, Radius))
-                using (SolidBrush sb = new SolidBrush(Color.FromArgb(30, 0, 0, 0)))
+                Rectangle shadowR = new Rectangle(r.X + 2, r.Y + 3, r.Width, r.Height);
+                using (GraphicsPath sp = GetRoundedPath(shadowR, Radius))
+                using (SolidBrush sb = new SolidBrush(Color.FromArgb(28, 0, 0, 0)))
                 {
                     g.FillPath(sb, sp);
                 }
@@ -227,34 +380,34 @@ namespace IntubaTalk
             Color c2 = _hover ? ControlPaint.Light(GradTo, 0.08f) : GradTo;
             if (_pressed) { c1 = ControlPaint.Dark(GradFrom, 0.06f); c2 = ControlPaint.Dark(GradTo, 0.06f); }
 
-            using (GraphicsPath gp = RoundedRect(r, Radius))
+            using (GraphicsPath gp = GetRoundedPath(r, Radius))
             {
                 using (LinearGradientBrush lb = new LinearGradientBrush(r, c1, c2, 135f))
                 {
                     g.FillPath(lb, gp);
                 }
 
-                // Inner highlight
-                using (Pen p = new Pen(Color.FromArgb(60, 255, 255, 255), 1f))
+                // Inner top-edge highlight
+                using (Pen pHi = new Pen(Color.FromArgb(70, 255, 255, 255), 1.2f))
                 {
-                    g.DrawPath(p, gp);
+                    g.DrawPath(pHi, gp);
                 }
             }
 
-            // Text
-            TextRenderer.DrawText(g, Text, Font, r,
-                Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            // Draw crisp centered text
+            TextRenderer.DrawText(g, Text, Font, r, Color.White,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  Custom small toolbar button with rounded corners and clay look.
+    //  ClayToolButton: Rounded pill toolbar button for secondary actions.
     // ─────────────────────────────────────────────────────────────────
     public class ClayToolButton : Button
     {
         private bool _hover = false;
         private readonly Color colSurface = Color.FromArgb(248, 247, 244);
-        private readonly Color colLine = Color.FromArgb(209, 203, 192);
+        private readonly Color colLine = Color.FromArgb(215, 210, 202);
         private readonly Color colText = Color.FromArgb(38, 51, 64);
 
         public ClayToolButton()
@@ -264,9 +417,9 @@ namespace IntubaTalk
             FlatStyle = FlatStyle.Flat;
             FlatAppearance.BorderSize = 0;
             Cursor = Cursors.Hand;
-            Font = new Font("Segoe UI", 8.8f, FontStyle.Bold);
+            Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             ForeColor = colText;
-            Height = 34;
+            Height = 36;
             Margin = new Padding(0, 0, 8, 0);
         }
 
@@ -277,6 +430,7 @@ namespace IntubaTalk
         {
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.Clear(Parent != null ? Parent.BackColor : colSurface);
 
             Rectangle r = new Rectangle(1, 1, Width - 3, Height - 3);
@@ -291,18 +445,18 @@ namespace IntubaTalk
 
             Color fill = _hover ? Color.White : colSurface;
             using (SolidBrush sb = new SolidBrush(fill)) { g.FillPath(sb, gp); }
-            using (Pen p = new Pen(colLine, 1f)) { g.DrawPath(p, gp); }
+            using (Pen p = new Pen(_hover ? Color.FromArgb(170, 165, 155) : colLine, 1f)) { g.DrawPath(p, gp); }
 
-            TextRenderer.DrawText(g, Text, Font, r,
-                colText, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(g, Text, Font, r, colText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
 
             gp.Dispose();
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  MAIN ROLE CHOOSER FORM
-    // ═══════════════════════════════════════════════════════════════
+    // ═════════════════════════════════════════════════════════════════
+    //  MAIN ROLE CHOOSER WINDOW
+    // ═════════════════════════════════════════════════════════════════
     public class RoleChooserForm : Form
     {
         private Process serverProcess = null;
@@ -311,26 +465,20 @@ namespace IntubaTalk
         private NotifyIcon trayIcon;
         private ContextMenuStrip trayMenu;
         private Label lblStatus;
-        private Label lblLan;
         private System.Windows.Forms.Timer healthTimer;
         private string appDir;
         private Icon customIcon;
 
-        // ── Palette (matches base.css :root) ──
-        private readonly Color colBg      = Color.FromArgb(243, 241, 236);  // --bg
-        private readonly Color colSurface = Color.FromArgb(248, 247, 244);  // --surface
-        private readonly Color colSurf2   = Color.FromArgb(239, 237, 231);  // --surface-2
-        private readonly Color colLine    = Color.FromArgb(221, 216, 207);  // --line
-        private readonly Color colLineSt  = Color.FromArgb(201, 195, 183);  // --line-strong
-        private readonly Color colText    = Color.FromArgb(38, 51, 64);     // --text
-        private readonly Color colSoft    = Color.FromArgb(93, 108, 120);   // --text-soft
-        private readonly Color colFaint   = Color.FromArgb(144, 154, 163);  // --text-faint
-        // Accents
-        private readonly Color colMint    = Color.FromArgb(63, 167, 150);   // --accent
-        private readonly Color colMintDk  = Color.FromArgb(51, 138, 124);   // --accent-deep
-        private readonly Color colTeal    = Color.FromArgb(63, 127, 167);   // teal variant
-        private readonly Color colTealDk  = Color.FromArgb(51, 106, 140);   // teal deep
-        private readonly Color colAlert   = Color.FromArgb(212, 84, 84);    // --alert
+        // Theme palette
+        private readonly Color colBg      = Color.FromArgb(243, 241, 236);  // Warm hospital beige
+        private readonly Color colSurface = Color.FromArgb(248, 247, 244);  // Clay card surface
+        private readonly Color colLine    = Color.FromArgb(221, 216, 207);  // Border line
+        private readonly Color colText    = Color.FromArgb(38, 51, 64);     // Ink text
+        private readonly Color colSoft    = Color.FromArgb(93, 108, 120);   // Secondary text
+        private readonly Color colMint    = Color.FromArgb(63, 167, 150);   // Patient mint
+        private readonly Color colMintDk  = Color.FromArgb(51, 138, 124);   // Patient dark mint
+        private readonly Color colTeal    = Color.FromArgb(63, 127, 167);   // Nurse teal
+        private readonly Color colTealDk  = Color.FromArgb(47, 101, 136);   // Nurse dark teal
 
         public RoleChooserForm(string initialRoute, bool startInTray)
         {
@@ -352,9 +500,6 @@ namespace IntubaTalk
             healthTimer.Tick += delegate { CheckServerStatus(); };
             healthTimer.Start();
 
-            this.KeyPreview = true;
-            this.KeyDown += RoleChooserForm_KeyDown;
-
             if (!string.IsNullOrEmpty(initialRoute))
             {
                 LaunchApp(initialRoute);
@@ -367,56 +512,21 @@ namespace IntubaTalk
             }
         }
 
-        private void RoleChooserForm_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.KeyCode == Keys.P || e.KeyCode == Keys.D1 || e.KeyCode == Keys.NumPad1)
-            { LaunchApp("/"); e.Handled = true; }
-            else if (e.KeyCode == Keys.N || e.KeyCode == Keys.D2 || e.KeyCode == Keys.NumPad2)
-            { LaunchApp("/nurse"); e.Handled = true; }
-            else if (e.KeyCode == Keys.D || e.KeyCode == Keys.D3 || e.KeyCode == Keys.NumPad3)
-            { LaunchApp("/dual"); e.Handled = true; }
-            else if (e.KeyCode == Keys.B || e.KeyCode == Keys.D4 || e.KeyCode == Keys.NumPad4)
-            { LaunchApp("/board"); e.Handled = true; }
-            else if (e.KeyCode == Keys.F1 || e.KeyCode == Keys.H)
-            { ShowHelp(); e.Handled = true; }
-        }
-
-        // ─────────────────────────────────────────────────
-        //  Build the UI
-        // ─────────────────────────────────────────────────
         private void InitUI()
         {
-            this.Text = "INTUBATALK";
-            this.Size = new Size(900, 700);
-            this.MinimumSize = new Size(780, 600);
+            this.Text = "INTUBATALK · Select Your Role";
+            this.Size = new Size(940, 710);
+            this.MinimumSize = new Size(820, 640);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = colBg;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
-            // Subtle radial gradient tint painted on form background
-            this.Paint += delegate(object sender, PaintEventArgs pe)
-            {
-                Graphics g = pe.Graphics;
-                // Mint glow top-right
-                Rectangle glowTR = new Rectangle(Width / 2, -80, (int)(Width * 0.8), (int)(Height * 0.6));
-                using (GraphicsPath gp = new GraphicsPath())
-                {
-                    gp.AddEllipse(glowTR);
-                    using (PathGradientBrush pgb = new PathGradientBrush(gp))
-                    {
-                        pgb.CenterColor = Color.FromArgb(14, 63, 167, 150);
-                        pgb.SurroundColors = new Color[] { Color.FromArgb(0, 63, 167, 150) };
-                        g.FillPath(pgb, gp);
-                    }
-                }
-            };
-
-            // ═══════ HEADER ═══════
+            // ══════════════════ 1. HEADER ══════════════════
             Panel pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 110,
+                Height = 112,
                 BackColor = colSurface,
                 Padding = new Padding(28, 0, 28, 0)
             };
@@ -425,20 +535,19 @@ namespace IntubaTalk
                 Graphics g = pe.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
 
-                // Bottom separator line
+                // Separator line
                 using (Pen p = new Pen(colLine))
                 {
                     g.DrawLine(p, 0, pnlHeader.Height - 1, pnlHeader.Width, pnlHeader.Height - 1);
                 }
 
-                // ── Brand mark: rounded square with gradient ──
-                int markSize = 50;
+                // Brand Mark: rounded square with mint gradient + soundwave bars
+                int markSize = 52;
                 int markX = 26;
                 int markY = 18;
                 Rectangle markRect = new Rectangle(markX, markY, markSize, markSize);
                 GraphicsPath markPath = new GraphicsPath();
-                int markRad = 14;
-                int md = markRad * 2;
+                int md = 28;
                 markPath.AddArc(markRect.X, markRect.Y, md, md, 180, 90);
                 markPath.AddArc(markRect.Right - md, markRect.Y, md, md, 270, 90);
                 markPath.AddArc(markRect.Right - md, markRect.Bottom - md, md, md, 0, 90);
@@ -449,28 +558,25 @@ namespace IntubaTalk
                 {
                     g.FillPath(lb, markPath);
                 }
-                // Inset highlight
-                using (Pen hp = new Pen(Color.FromArgb(80, 255, 255, 255), 1.2f))
+                using (Pen hp = new Pen(Color.FromArgb(90, 255, 255, 255), 1.5f))
                 {
                     g.DrawPath(hp, markPath);
                 }
 
-                // Soundwave bars inside mark
+                // 3 Soundwave bars
                 int cx = markX + markSize / 2;
                 int cy = markY + markSize / 2;
-                using (Pen wp = new Pen(Color.FromArgb(220, 255, 255, 255), 2.5f))
+                using (Pen wp = new Pen(Color.FromArgb(240, 255, 255, 255), 2.8f))
                 {
                     wp.StartCap = LineCap.Round;
                     wp.EndCap = LineCap.Round;
-                    g.DrawLine(wp, cx - 8, cy - 8, cx - 8, cy + 8);
-                    g.DrawLine(wp, cx - 1, cy - 13, cx - 1, cy + 13);
-                    g.DrawLine(wp, cx + 7, cy - 6, cx + 7, cy + 6);
+                    g.DrawLine(wp, cx - 9, cy - 8, cx - 9, cy + 8);
+                    g.DrawLine(wp, cx, cy - 14, cx, cy + 14);
+                    g.DrawLine(wp, cx + 9, cy - 7, cx + 9, cy + 7);
                 }
-
                 markPath.Dispose();
             };
 
-            // Title label (serif display font)
             Label lblTitle = new Label
             {
                 Text = "INTUBATALK",
@@ -478,30 +584,29 @@ namespace IntubaTalk
                 ForeColor = colText,
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(86, 18)
+                Location = new Point(90, 16)
             };
 
             Label lblTagline = new Label
             {
                 Text = "Speak without a voice. Touch, spell, blink, alert.",
-                Font = new Font("Georgia", 10f, FontStyle.Italic),
+                Font = new Font("Georgia", 10.5f, FontStyle.Italic),
                 ForeColor = colSoft,
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(88, 52)
+                Location = new Point(92, 52)
             };
 
-            Label lblChoose = new Label
+            Label lblPrompt = new Label
             {
                 Text = "Choose your role to get started:",
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                ForeColor = colFaint,
+                ForeColor = Color.FromArgb(120, 130, 140),
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(88, 78)
+                Location = new Point(92, 78)
             };
 
-            // Server status (top-right)
             lblStatus = new Label
             {
                 Text = "● Checking server...",
@@ -510,280 +615,86 @@ namespace IntubaTalk
                 AutoSize = true,
                 BackColor = colSurface,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(600, 22)
-            };
-
-            lblLan = new Label
-            {
-                Text = "Wi-Fi LAN: Detecting...",
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Regular),
-                ForeColor = colSoft,
-                AutoSize = true,
-                BackColor = colSurface,
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(600, 46)
+                Location = new Point(680, 22)
             };
 
             pnlHeader.Controls.Add(lblTitle);
             pnlHeader.Controls.Add(lblTagline);
-            pnlHeader.Controls.Add(lblChoose);
+            pnlHeader.Controls.Add(lblPrompt);
             pnlHeader.Controls.Add(lblStatus);
-            pnlHeader.Controls.Add(lblLan);
             this.Controls.Add(pnlHeader);
 
-            // ═══════ MAIN CARD AREA (two side-by-side clay cards) ═══════
-            TableLayoutPanel cardGrid = new TableLayoutPanel
+            // ══════════════════ 2. ROLE CARDS (PATIENT VS NURSE) ══════════════════
+            TableLayoutPanel roleGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1,
-                Padding = new Padding(12, 16, 12, 8),
-                BackColor = Color.Transparent
+                Padding = new Padding(16, 18, 16, 12),
+                BackColor = colBg
             };
-            cardGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
-            cardGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+            roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
 
-            // ── Patient card ──
-            ClayPanel cardPatient = new ClayPanel
+            // ── Card 1: Patient ──
+            ClayRoleCard cardPatient = new ClayRoleCard
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(8, 6, 6, 6),
+                Margin = new Padding(8, 6, 8, 6),
+                RoleBadge = "FOR THE PATIENT",
+                BadgeBg = Color.FromArgb(217, 239, 233),
+                BadgeText = Color.FromArgb(35, 95, 85),
+                RoleTitle = "Patient Tablet",
+                RoleSubtitle = "Designed for intubated or non-verbal ICU patients to communicate instantly without vocal cords.",
+                BulletPoints = new string[] {
+                    "1-Tap needs: Breathing, Suction, Pain, Water",
+                    "Visual 0 to 10 pain rating scale",
+                    "Nurse-assisted eye-blink protocol",
+                    "Alphabet speller pad & emergency alert"
+                },
+                ButtonText = "Select Patient Role",
                 AccentColor = colMint,
-                ShowAccentBar = true
+                AccentDark = colMintDk,
+                IsPatientIcon = true,
+                OnSelect = delegate { LaunchApp("/?fresh=1"); }
             };
+            cardPatient.BindData();
+            roleGrid.Controls.Add(cardPatient, 0, 0);
 
-            Label lblPatBadge = new Label
-            {
-                Text = "BEDSIDE PATIENT TABLET",
-                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
-                ForeColor = colMint,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(26, 24)
-            };
-
-            Label lblPatIcon = new Label
-            {
-                Text = "\U0001F464",
-                Font = new Font("Segoe UI Emoji", 28f),
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(24, 44)
-            };
-
-            Label lblPatTitle = new Label
-            {
-                Text = "I Am the Patient",
-                Font = new Font("Georgia", 17f, FontStyle.Bold),
-                ForeColor = colText,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(72, 50)
-            };
-
-            Label lblPatDesc = new Label
-            {
-                Text = "Designed for intubated or non-verbal ICU\npatients to communicate instantly.",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = colSoft,
-                AutoSize = false,
-                BackColor = Color.Transparent,
-                Size = new Size(340, 40),
-                Location = new Point(26, 90),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            // Feature bullets
-            string[] patFeats = new string[] {
-                "\u2713  1-Tap needs: Breathing, Suction, Pain, Thirst",
-                "\u2713  Visual 0\u201310 pain severity rating scale",
-                "\u2713  Nurse-assisted eye-blink protocol",
-                "\u2713  Freehand alphabet spelling & speech-to-text",
-                "\u2713  Loud emergency alert with patient cancel"
-            };
-
-            Panel pnlPatFeats = new Panel
-            {
-                Location = new Point(26, 136),
-                Size = new Size(340, 155),
-                BackColor = Color.FromArgb(245, 244, 240),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            pnlPatFeats.Paint += delegate(object s, PaintEventArgs pe)
-            {
-                Graphics g = pe.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                Rectangle r = new Rectangle(0, 0, pnlPatFeats.Width - 1, pnlPatFeats.Height - 1);
-                GraphicsPath gp = new GraphicsPath();
-                gp.AddArc(r.X, r.Y, 16, 16, 180, 90);
-                gp.AddArc(r.Right - 16, r.Y, 16, 16, 270, 90);
-                gp.AddArc(r.Right - 16, r.Bottom - 16, 16, 16, 0, 90);
-                gp.AddArc(r.X, r.Bottom - 16, 16, 16, 90, 90);
-                gp.CloseFigure();
-                using (Pen p = new Pen(Color.FromArgb(230, 226, 218), 1f)) { g.DrawPath(p, gp); }
-                gp.Dispose();
-            };
-
-            int yOff = 10;
-            foreach (string f in patFeats)
-            {
-                Label lbl = new Label
-                {
-                    Text = f,
-                    Font = new Font("Segoe UI", 9f),
-                    ForeColor = colText,
-                    AutoSize = true,
-                    BackColor = Color.Transparent,
-                    Location = new Point(14, yOff)
-                };
-                pnlPatFeats.Controls.Add(lbl);
-                yOff += 27;
-            }
-
-            // CTA button
-            GradientButton btnPatient = new GradientButton
-            {
-                Text = "\u25B6  Open Patient Tablet  (P / 1)",
-                GradFrom = colMint,
-                GradTo = colMintDk,
-                Height = 54,
-                Dock = DockStyle.Bottom,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold)
-            };
-            btnPatient.Click += delegate { LaunchApp("/"); };
-
-            cardPatient.Controls.Add(lblPatBadge);
-            cardPatient.Controls.Add(lblPatIcon);
-            cardPatient.Controls.Add(lblPatTitle);
-            cardPatient.Controls.Add(lblPatDesc);
-            cardPatient.Controls.Add(pnlPatFeats);
-            cardPatient.Controls.Add(btnPatient);
-            cardGrid.Controls.Add(cardPatient, 0, 0);
-
-            // ── Nurse card ──
-            ClayPanel cardNurse = new ClayPanel
+            // ── Card 2: Nurse ──
+            ClayRoleCard cardNurse = new ClayRoleCard
             {
                 Dock = DockStyle.Fill,
-                Margin = new Padding(6, 6, 8, 6),
+                Margin = new Padding(8, 6, 8, 6),
+                RoleBadge = "FOR THE NURSE / CLINICIAN",
+                BadgeBg = Color.FromArgb(217, 231, 239),
+                BadgeText = Color.FromArgb(32, 75, 102),
+                RoleTitle = "Nurse Dashboard",
+                RoleSubtitle = "Designed for bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.",
+                BulletPoints = new string[] {
+                    "Live incoming feed paired via 4-digit code",
+                    "Urgent repeating sirens and chimes",
+                    "Instant acknowledge (\"Nurse on the way\")",
+                    "Text-to-speech speaker reads requests aloud"
+                },
+                ButtonText = "Select Nurse Role",
                 AccentColor = colTeal,
-                ShowAccentBar = true
+                AccentDark = colTealDk,
+                IsPatientIcon = false,
+                OnSelect = delegate { LaunchApp("/nurse?fresh=1"); }
             };
+            cardNurse.BindData();
+            roleGrid.Controls.Add(cardNurse, 1, 0);
 
-            Label lblNurBadge = new Label
-            {
-                Text = "NURSE STATION DASHBOARD",
-                Font = new Font("Segoe UI", 8f, FontStyle.Bold),
-                ForeColor = colTeal,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(26, 24)
-            };
+            this.Controls.Add(roleGrid);
 
-            Label lblNurIcon = new Label
-            {
-                Text = "\U0001FA7A",
-                Font = new Font("Segoe UI Emoji", 28f),
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(24, 44)
-            };
-
-            Label lblNurTitle = new Label
-            {
-                Text = "I Am the Nurse",
-                Font = new Font("Georgia", 17f, FontStyle.Bold),
-                ForeColor = colText,
-                AutoSize = true,
-                BackColor = Color.Transparent,
-                Location = new Point(72, 50)
-            };
-
-            Label lblNurDesc = new Label
-            {
-                Text = "Designed for bedside nurses, doctors and\nward staff to monitor patient requests.",
-                Font = new Font("Segoe UI", 9.5f, FontStyle.Regular),
-                ForeColor = colSoft,
-                AutoSize = false,
-                BackColor = Color.Transparent,
-                Size = new Size(340, 40),
-                Location = new Point(26, 90),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
-            };
-
-            string[] nurFeats = new string[] {
-                "\u2713  Live request feed paired via 4-digit code",
-                "\u2713  Repeating emergency sirens & chimes",
-                "\u2713  Filter tabs: Emergencies, Active, Handled",
-                "\u2713  Text-to-speech reads requests aloud",
-                "\u2713  Patient ability profile & presence tracking"
-            };
-
-            Panel pnlNurFeats = new Panel
-            {
-                Location = new Point(26, 136),
-                Size = new Size(340, 155),
-                BackColor = Color.FromArgb(245, 244, 240),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom
-            };
-            pnlNurFeats.Paint += delegate(object s, PaintEventArgs pe)
-            {
-                Graphics g = pe.Graphics;
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                Rectangle r = new Rectangle(0, 0, pnlNurFeats.Width - 1, pnlNurFeats.Height - 1);
-                GraphicsPath gp = new GraphicsPath();
-                gp.AddArc(r.X, r.Y, 16, 16, 180, 90);
-                gp.AddArc(r.Right - 16, r.Y, 16, 16, 270, 90);
-                gp.AddArc(r.Right - 16, r.Bottom - 16, 16, 16, 0, 90);
-                gp.AddArc(r.X, r.Bottom - 16, 16, 16, 90, 90);
-                gp.CloseFigure();
-                using (Pen p = new Pen(Color.FromArgb(230, 226, 218), 1f)) { g.DrawPath(p, gp); }
-                gp.Dispose();
-            };
-
-            yOff = 10;
-            foreach (string f in nurFeats)
-            {
-                Label lbl = new Label
-                {
-                    Text = f,
-                    Font = new Font("Segoe UI", 9f),
-                    ForeColor = colText,
-                    AutoSize = true,
-                    BackColor = Color.Transparent,
-                    Location = new Point(14, yOff)
-                };
-                pnlNurFeats.Controls.Add(lbl);
-                yOff += 27;
-            }
-
-            GradientButton btnNurse = new GradientButton
-            {
-                Text = "\u25B6  Open Nurse Dashboard  (N / 2)",
-                GradFrom = colTeal,
-                GradTo = colTealDk,
-                Height = 54,
-                Dock = DockStyle.Bottom,
-                Font = new Font("Segoe UI", 12f, FontStyle.Bold)
-            };
-            btnNurse.Click += delegate { LaunchApp("/nurse"); };
-
-            cardNurse.Controls.Add(lblNurBadge);
-            cardNurse.Controls.Add(lblNurIcon);
-            cardNurse.Controls.Add(lblNurTitle);
-            cardNurse.Controls.Add(lblNurDesc);
-            cardNurse.Controls.Add(pnlNurFeats);
-            cardNurse.Controls.Add(btnNurse);
-            cardGrid.Controls.Add(cardNurse, 1, 0);
-
-            this.Controls.Add(cardGrid);
-
-            // ═══════ BOTTOM TOOLBAR ═══════
+            // ══════════════════ 3. BOTTOM TOOLBAR ══════════════════
             Panel pnlBottom = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 64,
+                Height = 62,
                 BackColor = colSurface,
-                Padding = new Padding(20, 14, 20, 14)
+                Padding = new Padding(22, 12, 22, 12)
             };
             pnlBottom.Paint += delegate(object sender, PaintEventArgs pe)
             {
@@ -802,11 +713,11 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayToolButton btnDual = new ClayToolButton { Text = "\U0001F465 Dual View (3/D)", Width = 150 };
+            ClayToolButton btnDual = new ClayToolButton { Text = "👥 Dual Simulator (Split)", Width = 180 };
             btnDual.Click += delegate { LaunchApp("/dual"); };
-            ClayToolButton btnBoard = new ClayToolButton { Text = "\U0001F4CB Board (4/B)", Width = 130 };
+            ClayToolButton btnBoard = new ClayToolButton { Text = "📋 Printable Board", Width = 140 };
             btnBoard.Click += delegate { LaunchApp("/board"); };
-            ClayToolButton btnWifi = new ClayToolButton { Text = "\U0001F310 Copy Wi-Fi Link", Width = 145 };
+            ClayToolButton btnWifi = new ClayToolButton { Text = "🌐 Bedside Wi-Fi Link", Width = 150 };
             btnWifi.Click += delegate { CopyLanUrl(); };
 
             flowLeft.Controls.Add(btnDual);
@@ -822,9 +733,9 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayToolButton btnHelp = new ClayToolButton { Text = "\u2753 Help & Keys", Width = 115 };
+            ClayToolButton btnHelp = new ClayToolButton { Text = "❓ How It Works", Width = 125 };
             btnHelp.Click += delegate { ShowHelp(); };
-            ClayToolButton btnRestart = new ClayToolButton { Text = "\U0001F504 Restart Server", Width = 125 };
+            ClayToolButton btnRestart = new ClayToolButton { Text = "🔄 Restart Server", Width = 125 };
             btnRestart.Click += delegate { RestartServer(); };
 
             flowRight.Controls.Add(btnHelp);
@@ -835,18 +746,18 @@ namespace IntubaTalk
             this.Controls.Add(pnlBottom);
         }
 
-        // ─────────────────────────────────────────────────
-        //  System Tray
-        // ─────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────
+        //  System Tray Integration
+        // ─────────────────────────────────────────────────────────
         private void InitTray()
         {
             trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("\U0001F4F1 Open Patient Tablet", null, delegate { LaunchApp("/"); });
-            trayMenu.Items.Add("\U0001FA7A Open Nurse Dashboard", null, delegate { LaunchApp("/nurse"); });
-            trayMenu.Items.Add("\U0001F465 Open Dual Simulator", null, delegate { LaunchApp("/dual"); });
-            trayMenu.Items.Add("\U0001F4CB Open Printable Board", null, delegate { LaunchApp("/board"); });
+            trayMenu.Items.Add("📱 Open Patient Tablet", null, delegate { LaunchApp("/?fresh=1"); });
+            trayMenu.Items.Add("🩺 Open Nurse Dashboard", null, delegate { LaunchApp("/nurse?fresh=1"); });
+            trayMenu.Items.Add("👥 Open Dual Simulator", null, delegate { LaunchApp("/dual"); });
+            trayMenu.Items.Add("📋 Open Printable Board", null, delegate { LaunchApp("/board"); });
             trayMenu.Items.Add("-");
-            trayMenu.Items.Add("Open Role Chooser Hub", null, delegate { RestoreFromTray(); });
+            trayMenu.Items.Add("Select Role / Open Hub", null, delegate { RestoreFromTray(); });
             trayMenu.Items.Add("Copy Bedside Wi-Fi URL", null, delegate { CopyLanUrl(); });
             trayMenu.Items.Add("-");
             trayMenu.Items.Add("Exit Application", null, delegate { Application.Exit(); });
@@ -869,16 +780,15 @@ namespace IntubaTalk
             this.Activate();
         }
 
-        // ─────────────────────────────────────────────────
-        //  Server lifecycle
-        // ─────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────
+        //  Server Process Management
+        // ─────────────────────────────────────────────────────────
         private void StartServerIfNeeded()
         {
             if (IsServerAnswering(serverPort))
             {
-                lblStatus.Text = "\u25CF Server Online (Port " + serverPort + ")";
+                lblStatus.Text = "● Server Online (Port " + serverPort + ")";
                 lblStatus.ForeColor = Color.ForestGreen;
-                UpdateLanInfo();
                 return;
             }
 
@@ -898,12 +808,12 @@ namespace IntubaTalk
                     };
                     serverProcess = Process.Start(psi);
                     ownsServer = true;
-                    lblStatus.Text = "\u25CF Starting server...";
+                    lblStatus.Text = "● Starting server...";
                     lblStatus.ForeColor = Color.DarkOrange;
                 }
                 catch (Exception ex)
                 {
-                    lblStatus.Text = "\u25CF Node start error: " + ex.Message;
+                    lblStatus.Text = "● Node start error: " + ex.Message;
                     lblStatus.ForeColor = Color.Red;
                 }
             }
@@ -938,21 +848,14 @@ namespace IntubaTalk
             bool ok = IsServerAnswering(serverPort);
             if (ok)
             {
-                lblStatus.Text = "\u25CF Server Online (Port " + serverPort + ")";
+                lblStatus.Text = "● Server Online (Port " + serverPort + ")";
                 lblStatus.ForeColor = Color.ForestGreen;
-                UpdateLanInfo();
             }
             else
             {
-                lblStatus.Text = "\u25CF Server Offline";
+                lblStatus.Text = "● Server Offline";
                 lblStatus.ForeColor = Color.Red;
             }
-        }
-
-        private void UpdateLanInfo()
-        {
-            string lanIp = GetLocalIpAddress();
-            lblLan.Text = "Bedside Wi-Fi: http://" + lanIp + ":" + serverPort + "/";
         }
 
         private string GetLocalIpAddress()
@@ -970,9 +873,9 @@ namespace IntubaTalk
             return "127.0.0.1";
         }
 
-        // ─────────────────────────────────────────────────
-        //  Launch in Edge/Chrome App Mode or default browser
-        // ─────────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────
+        //  App Launching (Edge/Chrome App Mode or Default Browser)
+        // ─────────────────────────────────────────────────────────
         private void LaunchApp(string route)
         {
             string url = "http://127.0.0.1:" + serverPort + route;
@@ -1026,8 +929,8 @@ namespace IntubaTalk
             string url = "http://" + lanIp + ":" + serverPort + "/";
             Clipboard.SetText(url);
             MessageBox.Show(
-                "Wi-Fi LAN URL copied to clipboard:\n\n" + url +
-                "\n\nOpen this address in any browser (Safari, Chrome, Edge) on iPads, Android tablets, or phones on the same Wi-Fi network to connect directly to this patient room.",
+                "Bedside Wi-Fi link copied to clipboard:\n\n" + url +
+                "\n\nOpen this link on any iPad, tablet, or phone connected to the same Wi-Fi network to use INTUBATALK at the bedside.",
                 "Bedside Wi-Fi Connection",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -1035,18 +938,17 @@ namespace IntubaTalk
         private void ShowHelp()
         {
             MessageBox.Show(
-                "INTUBATALK Accessibility & Quick Keys:\n\n" +
-                "\u2022 Press [P] or [1]: Enter Patient Tablet\n" +
-                "\u2022 Press [N] or [2]: Enter Nurse Dashboard\n" +
-                "\u2022 Press [D] or [3]: Enter Dual Presentation Simulator\n" +
-                "\u2022 Press [B] or [4]: Open Printable Backup Board\n" +
-                "\u2022 Press [Tab]: Navigate between role cards and buttons\n" +
-                "\u2022 Press [Enter]: Activate selected button\n\n" +
-                "How Pairing Works:\n" +
-                "1. Patient registers on the tablet -> receives a 4-digit room code.\n" +
-                "2. Nurse enters that 4-digit code on the dashboard -> devices pair instantly.\n" +
-                "3. In emergency, pressing the red button sounds a continuous alarm until silenced.",
-                "INTUBATALK Guide & Accessibility",
+                "INTUBATALK — Quick Guide:\n\n" +
+                "1. Select Patient Role:\n" +
+                "   Opens the Bedside Tablet starting fresh from the registration wizard.\n" +
+                "   Enter the patient name and bed number to receive a 4-digit room code.\n\n" +
+                "2. Select Nurse Role:\n" +
+                "   Opens the Nurse Dashboard. Enter the patient's 4-digit code to pair instantly.\n\n" +
+                "3. Dual Simulator:\n" +
+                "   Presents both Patient and Nurse screens side-by-side on this display.\n\n" +
+                "4. Printable Board:\n" +
+                "   Generates a clean, laminatable communication chart as a paper backup.",
+                "INTUBATALK Guide",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

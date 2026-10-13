@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<title>INTUBATALK · Choose Your Role</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+.chooser-wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 20px;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+.chooser-header {
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 32px;
+}
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.brand-mark-lg {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 4px 6px 14px rgba(63, 167, 150, 0.28);
+}
+.brand-mark-lg svg {
+  width: 28px;
+  height: 28px;
+  color: #fff;
+}
+.chooser-header h1 {
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.chooser-header p.tag {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 16.5px;
+  color: var(--text-soft);
+  margin: 6px 0 16px;
+}
+.chooser-header p.sub {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin: 0;
+}
+.roles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+@media (max-width: 760px) {
+  .roles-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+.role-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: 30px 28px;
+  box-shadow: var(--clay-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  position: relative;
+  overflow: hidden;
+}
+.role-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--clay-raised);
+}
+.role-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+}
+.role-card.patient-card::before {
+  background: linear-gradient(90deg, var(--accent), var(--accent-deep));
+}
+.role-card.nurse-card::before {
+  background: linear-gradient(90deg, #3f7fa7, #2f6588);
+}
+.role-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.role-badge {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+.badge-patient {
+  background: var(--accent-soft);
+  color: #235f55;
+}
+.badge-nurse {
+  background: #d9e7ef;
+  color: #204b66;
+}
+.role-icon-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.icon-circle-patient {
+  background: #e6f5f1;
+  color: var(--accent-deep);
+}
+.icon-circle-nurse {
+  background: #e6eff5;
+  color: #2f6588;
+}
+.role-card h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+}
+.role-card p.desc {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-soft);
+  margin: 0 0 20px;
+  min-height: 44px;
+}
+.feature-list {
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  margin-bottom: 24px;
+  border: 1px solid var(--line);
+}
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 5px 0;
+}
+.feature-item svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.patient-card .feature-item svg { color: var(--accent-deep); }
+.nurse-card .feature-item svg { color: #2f6588; }
+.btn-role {
+  width: 100%;
+  padding: 16px;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 14px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn-role:active {
+  transform: translateY(1px);
+}
+.btn-patient-role {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: #fff;
+}
+.btn-patient-role:hover {
+  background: linear-gradient(135deg, #46b8a6 0%, #3a9686 100%);
+  box-shadow: 0 6px 16px rgba(63, 167, 150, 0.32);
+}
+.btn-nurse-role {
+  background: linear-gradient(135deg, #3f7fa7 0%, #2f6588 100%);
+  color: #fff;
+}
+.btn-nurse-role:hover {
+  background: linear-gradient(135deg, #488ebd 0%, #367299 100%);
+  box-shadow: 0 6px 16px rgba(63, 127, 167, 0.32);
+}
+.chooser-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--text-soft);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.footer-links {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.footer-link {
+  color: var(--text-soft);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.footer-link:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+</style>
+</head>
+<body>
+
+<div class="chooser-wrap">
+  <header class="chooser-header">
+    <div class="brand-badge">
+      <div class="brand-mark-lg" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="6" y1="8" x2="6" y2="16"></line>
+          <line x1="12" y1="4" x2="12" y2="20"></line>
+          <line x1="18" y1="9" x2="18" y2="15"></line>
+        </svg>
+      </div>
+      <h1>INTUBATALK</h1>
+    </div>
+    <p class="tag">Speak without a voice. Touch, spell, blink, alert.</p>
+    <p class="sub">Select your role to get started:</p>
+  </header>
+
+  <main class="roles-grid">
+    <!-- Patient Card -->
+    <article class="role-card patient-card">
+      <div>
+        <div class="role-top">
+          <span class="role-badge badge-patient">Bedside Patient</span>
+        </div>
+        <div class="role-icon-circle icon-circle-patient" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z"></path>
+            <path d="M6 15V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8"></path>
+            <path d="M9 8h4"></path>
+          </svg>
+        </div>
+        <h2>I Am the Patient</h2>
+        <p class="desc">Designed for intubated or non-verbal ICU patients to communicate instantly without vocal cords.</p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>1-Tap needs: Breathing, Suction, Pain, Water</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Visual 0 to 10 pain rating scale</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Nurse-assisted eye-blink protocol</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Alphabet speller pad & emergency alert</span>
+          </div>
+        </div>
+      </div>
+
+      <a href="/?fresh=1" class="btn-role btn-patient-role">
+        <span>Select Patient Role</span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </a>
+    </article>
+
+    <!-- Nurse Card -->
+    <article class="role-card nurse-card">
+      <div>
+        <div class="role-top">
+          <span class="role-badge badge-nurse">Nurse Station</span>
+        </div>
+        <div class="role-icon-circle icon-circle-nurse" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"></path>
+            <path d="M6 21v-2a6 6 0 0 1 12 0v2"></path>
+            <path d="M11 7h2M12 6v2"></path>
+          </svg>
+        </div>
+        <h2>I Am the Nurse</h2>
+        <p class="desc">Designed for bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.</p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Live incoming feed paired via 4-digit code</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Urgent repeating sirens and chimes</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Instant acknowledge ("Nurse on the way")</span>
+          </div>
+          <div class="feature-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Text-to-speech speaker reads requests aloud</span>
+          </div>
+        </div>
+      </div>
+
+      <a href="/nurse?fresh=1" class="btn-role btn-nurse-role">
+        <span>Select Nurse Role</span>
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </a>
+    </article>
+  </main>
+
+  <footer class="chooser-footer">
+    <span>INTUBATALK ICU Clinical System</span>
+    <div class="footer-links">
+      <a href="/dual" class="footer-link">👥 Dual Simulator (Split View)</a>
+      <a href="/board" class="footer-link">📋 Printable Backup Board</a>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>

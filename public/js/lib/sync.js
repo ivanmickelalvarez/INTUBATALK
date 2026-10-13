@@ -60,6 +60,20 @@ export const attach = (code) => {
   startPolling();
 };
 
+// Completely wipe session and profile so app starts fresh from the beginning.
+export const clearSession = () => {
+  room = null;
+  profile = null;
+  try {
+    localStorage.removeItem(LS_ROOM);
+    localStorage.removeItem("it_profile");
+    sessionStorage.removeItem(LS_ROOM);
+    sessionStorage.removeItem("it_profile");
+  } catch { /* noop */ }
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+};
+
 // ---- profile (customer + capabilities) --------------------------------------
 
 let profile = null;
