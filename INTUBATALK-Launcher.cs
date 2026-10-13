@@ -1,8 +1,10 @@
 // INTUBATALK Windows Desktop Application & Role Chooser
 // Native Windows executable compiled with C# (.NET Framework 4.x).
-// Designed with Clinical Claymorphism — warm hospital palette, soft raised cards,
-// dual shadows, clean vector icons, and clear buttons to select between roles.
-// Ensures every session starts fresh from the very beginning.
+// Designed with authentic Clinical Claymorphism:
+// - Puffy matte 3D cards with dual diffused blur shadows & inset rim highlights
+// - Soft medical palette (warm beige bg, mint & teal clay accents)
+// - Tactile 3D puffy buttons to directly select Patient or Nurse
+// - Enforces a brand-new patient login whenever the app is reopened
 
 using System;
 using System.IO;
@@ -34,6 +36,7 @@ namespace IntubaTalk
                 else if (arg.Equals("--nurse", StringComparison.OrdinalIgnoreCase)) initialRoute = "/nurse?fresh=1";
                 else if (arg.Equals("--dual", StringComparison.OrdinalIgnoreCase)) initialRoute = "/dual";
                 else if (arg.Equals("--board", StringComparison.OrdinalIgnoreCase)) initialRoute = "/board";
+                else if (arg.Equals("--choose", StringComparison.OrdinalIgnoreCase)) initialRoute = "/choose";
                 else if (arg.Equals("--tray", StringComparison.OrdinalIgnoreCase)) startInTray = true;
             }
 
@@ -42,9 +45,9 @@ namespace IntubaTalk
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  ClayRoleCard: An interactive, owner-drawn claymorphic role card
-    //  featuring soft dual shadows, custom vector icons, clear descriptions,
-    //  and a large, accessible CTA button.
+    //  ClayRoleCard: Authentic Claymorphism card panel
+    //  Features multi-pass Gaussian-diffused dual shadows, inset rim
+    //  highlights, recessed feature well, and puffy 3D tactile button.
     // ─────────────────────────────────────────────────────────────────
     public class ClayRoleCard : Panel
     {
@@ -61,7 +64,7 @@ namespace IntubaTalk
         public Action OnSelect { get; set; }
 
         private bool _cardHover = false;
-        private GradientButton _ctaBtn;
+        private ClayPuffyButton _ctaBtn;
 
         public ClayRoleCard()
         {
@@ -69,10 +72,10 @@ namespace IntubaTalk
                      ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
                      ControlStyles.SupportsTransparentBackColor, true);
             BackColor = Color.Transparent;
-            Padding = new Padding(24, 22, 24, 20);
+            Padding = new Padding(26, 22, 26, 22);
 
-            _ctaBtn = new GradientButton();
-            _ctaBtn.Height = 54;
+            _ctaBtn = new ClayPuffyButton();
+            _ctaBtn.Height = 56;
             _ctaBtn.Dock = DockStyle.Bottom;
             _ctaBtn.Click += delegate { if (OnSelect != null) OnSelect(); };
             this.Controls.Add(_ctaBtn);
@@ -93,6 +96,8 @@ namespace IntubaTalk
         {
             GraphicsPath gp = new GraphicsPath();
             int d = rad * 2;
+            if (d > r.Width) d = r.Width;
+            if (d > r.Height) d = r.Height;
             gp.AddArc(r.X, r.Y, d, d, 180, 90);
             gp.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             gp.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
@@ -121,54 +126,84 @@ namespace IntubaTalk
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            Rectangle cardBody = new Rectangle(12, 10, Width - 24, Height - 22);
-            int rad = 22;
+            Rectangle cardBody = new Rectangle(14, 12, Width - 28, Height - 24);
+            int rad = 26;
 
-            // 1. Dual clay shadows
-            // Dark shadow bottom-right
-            Rectangle darkShadow = new Rectangle(cardBody.X + 5, cardBody.Y + 6, cardBody.Width, cardBody.Height);
-            using (GraphicsPath sp = GetRoundedPath(darkShadow, rad))
-            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_cardHover ? 36 : 26, 103, 112, 108)))
-            {
-                g.FillPath(sb, sp);
-            }
+            // ── 1. AUTHENTIC CLAYMORPHISM DUAL DIFFUSED SHADOWS ──
+            // Bottom-right soft dark diffused shadow (multi-pass blur)
+            int darkBlur = _cardHover ? 12 : 9;
+            int darkMaxAlpha = _cardHover ? 14 : 11;
+            int darkOffX = _cardHover ? 7 : 5;
+            int darkOffY = _cardHover ? 8 : 6;
 
-            // Light highlight shadow top-left
-            Rectangle lightShadow = new Rectangle(cardBody.X - 4, cardBody.Y - 4, cardBody.Width, cardBody.Height);
-            using (GraphicsPath sp = GetRoundedPath(lightShadow, rad))
-            using (SolidBrush sb = new SolidBrush(Color.FromArgb(_cardHover ? 210 : 190, 255, 255, 255)))
+            for (int i = darkBlur; i >= 1; i--)
             {
-                g.FillPath(sb, sp);
-            }
-
-            // 2. Card surface fill
-            using (GraphicsPath cp = GetRoundedPath(cardBody, rad))
-            {
-                using (SolidBrush fb = new SolidBrush(Color.FromArgb(248, 247, 244)))
+                int alpha = (int)(darkMaxAlpha * ((float)(darkBlur - i + 1) / darkBlur));
+                Rectangle sr = new Rectangle(
+                    cardBody.X + darkOffX - i,
+                    cardBody.Y + darkOffY - i,
+                    cardBody.Width + i * 2,
+                    cardBody.Height + i * 2);
+                using (GraphicsPath sp = GetRoundedPath(sr, rad + i))
+                using (SolidBrush sb = new SolidBrush(Color.FromArgb(alpha, 103, 112, 108)))
                 {
-                    g.FillPath(fb, cp);
-                }
-
-                // Inset light highlight
-                using (Pen pHi = new Pen(Color.FromArgb(180, 255, 255, 255), 1.5f))
-                {
-                    g.DrawPath(pHi, cp);
+                    g.FillPath(sb, sp);
                 }
             }
 
-            // Subtle outer border
-            using (GraphicsPath cp = GetRoundedPath(cardBody, rad))
-            using (Pen pBorder = new Pen(Color.FromArgb(32, 96, 99, 106), 1f))
+            // Top-left soft white ambient glow (multi-pass light)
+            int lightBlur = _cardHover ? 11 : 8;
+            int lightMaxAlpha = _cardHover ? 48 : 38;
+            int lightOffX = -5;
+            int lightOffY = -5;
+
+            for (int i = lightBlur; i >= 1; i--)
             {
-                g.DrawPath(pBorder, cp);
+                int alpha = (int)(lightMaxAlpha * ((float)(lightBlur - i + 1) / lightBlur));
+                Rectangle lr = new Rectangle(
+                    cardBody.X + lightOffX - i,
+                    cardBody.Y + lightOffY - i,
+                    cardBody.Width + i * 2,
+                    cardBody.Height + i * 2);
+                using (GraphicsPath lp = GetRoundedPath(lr, rad + i))
+                using (SolidBrush lb = new SolidBrush(Color.FromArgb(alpha, 255, 255, 255)))
+                {
+                    g.FillPath(lb, lp);
+                }
             }
 
-            // 3. Top accent bar
-            Rectangle topBarRect = new Rectangle(cardBody.X, cardBody.Y, cardBody.Width, rad + 4);
+            // ── 2. PUFFY 3D CLAY CARD SURFACE FILL ──
+            using (GraphicsPath cp = GetRoundedPath(cardBody, rad))
+            {
+                // Gentle gradient from top-left soft light to bottom-right warm matte clay
+                using (LinearGradientBrush lgb = new LinearGradientBrush(
+                    cardBody,
+                    Color.FromArgb(253, 252, 250),
+                    Color.FromArgb(246, 244, 239),
+                    135f))
+                {
+                    g.FillPath(lgb, cp);
+                }
+
+                // Inset 3D top-left curved rim highlight (simulating light hitting clay curve)
+                using (Pen pRimHi = new Pen(Color.FromArgb(220, 255, 255, 255), 2.2f))
+                {
+                    g.DrawPath(pRimHi, cp);
+                }
+
+                // Inset 3D bottom-right curved rim shadow (simulating clay curve depth)
+                using (Pen pRimShade = new Pen(Color.FromArgb(26, 96, 99, 106), 1.2f))
+                {
+                    g.DrawPath(pRimShade, cp);
+                }
+            }
+
+            // ── 3. TOP CLAY ACCENT STRIP ──
+            Rectangle topAccentRect = new Rectangle(cardBody.X, cardBody.Y, cardBody.Width, rad + 4);
             using (GraphicsPath fullPath = GetRoundedPath(cardBody, rad))
             {
                 Region oldClip = g.Clip;
-                g.SetClip(topBarRect);
+                g.SetClip(topAccentRect);
                 g.IntersectClip(new Region(fullPath));
                 using (LinearGradientBrush lb = new LinearGradientBrush(
                     new Rectangle(cardBody.X, cardBody.Y, cardBody.Width, 6), AccentColor, AccentDark, 0f))
@@ -178,19 +213,26 @@ namespace IntubaTalk
                 g.Clip = oldClip;
             }
 
-            // 4. Role Badge (Pill)
+            // ── 4. SOFT PASTEL PILL BADGE ──
             int badgeX = cardBody.X + 22;
             int badgeY = cardBody.Y + 20;
             using (Font fBadge = new Font("Segoe UI", 8.2f, FontStyle.Bold))
             {
                 SizeF bSize = g.MeasureString(RoleBadge ?? "", fBadge);
-                int bWidth = (int)bSize.Width + 18;
-                int bHeight = 24;
+                int bWidth = (int)bSize.Width + 20;
+                int bHeight = 25;
                 Rectangle bRect = new Rectangle(badgeX, badgeY, bWidth, bHeight);
                 using (GraphicsPath bp = GetRoundedPath(bRect, 12))
-                using (SolidBrush bb = new SolidBrush(BadgeBg))
                 {
-                    g.FillPath(bb, bp);
+                    using (SolidBrush bb = new SolidBrush(BadgeBg))
+                    {
+                        g.FillPath(bb, bp);
+                    }
+                    // Inset highlight on badge
+                    using (Pen bpPen = new Pen(Color.FromArgb(140, 255, 255, 255), 1f))
+                    {
+                        g.DrawPath(bpPen, bp);
+                    }
                 }
                 using (SolidBrush tb = new SolidBrush(BadgeText))
                 {
@@ -199,61 +241,61 @@ namespace IntubaTalk
                 }
             }
 
-            // 5. Custom Vector Icon in rounded circle
+            // ── 5. 3D CLAY ICON CONTAINER ──
             int iconBoxX = cardBody.X + 22;
             int iconBoxY = cardBody.Y + 54;
-            int iconBoxSize = 50;
+            int iconBoxSize = 52;
             Rectangle iconBox = new Rectangle(iconBoxX, iconBoxY, iconBoxSize, iconBoxSize);
             using (GraphicsPath ip = GetRoundedPath(iconBox, 16))
-            using (SolidBrush ib = new SolidBrush(IsPatientIcon ? Color.FromArgb(230, 245, 241) : Color.FromArgb(230, 239, 245)))
             {
-                g.FillPath(ib, ip);
+                // Soft tinted circular background with clay lighting
+                Color iconBg1 = IsPatientIcon ? Color.FromArgb(234, 248, 244) : Color.FromArgb(233, 242, 248);
+                Color iconBg2 = IsPatientIcon ? Color.FromArgb(217, 239, 233) : Color.FromArgb(217, 231, 239);
+                using (LinearGradientBrush ib = new LinearGradientBrush(iconBox, iconBg1, iconBg2, 135f))
+                {
+                    g.FillPath(ib, ip);
+                }
+                using (Pen ihPen = new Pen(Color.FromArgb(180, 255, 255, 255), 1.5f))
+                {
+                    g.DrawPath(ihPen, ip);
+                }
             }
 
-            // Draw crisp vector icon inside iconBox
+            // Draw clean medical vector icon
             int icx = iconBoxX + iconBoxSize / 2;
             int icy = iconBoxY + iconBoxSize / 2;
 
             if (IsPatientIcon)
             {
-                // Vector Patient Bed icon
-                using (Pen pen = new Pen(AccentDark, 2.2f))
+                using (Pen pen = new Pen(AccentDark, 2.4f))
                 {
                     pen.StartCap = LineCap.Round;
                     pen.EndCap = LineCap.Round;
-                    // Head/pillow circle
                     g.DrawEllipse(pen, icx - 14, icy - 8, 8, 8);
-                    // Bed horizontal mattress
                     g.DrawLine(pen, icx - 16, icy + 6, icx + 16, icy + 6);
-                    // Headboard
                     g.DrawLine(pen, icx - 16, icy - 2, icx - 16, icy + 12);
-                    // Footboard
                     g.DrawLine(pen, icx + 16, icy + 2, icx + 16, icy + 12);
-                    // Patient blanket curve
                     g.DrawArc(pen, icx - 6, icy - 4, 16, 10, 180, 180);
                 }
             }
             else
             {
-                // Vector Medical Stethoscope / Cross icon
-                using (Pen pen = new Pen(AccentDark, 2.2f))
+                using (Pen pen = new Pen(AccentDark, 2.4f))
                 {
                     pen.StartCap = LineCap.Round;
                     pen.EndCap = LineCap.Round;
-                    // Medical Cross emblem
                     g.DrawLine(pen, icx, icy - 13, icx, icy + 13);
                     g.DrawLine(pen, icx - 13, icy, icx + 13, icy);
-                    // Surrounding subtle circular bracket
                     g.DrawArc(pen, icx - 15, icy - 15, 30, 30, 45, 90);
                     g.DrawArc(pen, icx - 15, icy - 15, 30, 30, 225, 90);
                 }
             }
 
-            // 6. Title and Subtitle
+            // ── 6. TITLE AND SUBTITLE ──
             int textX = cardBody.X + 22;
             int titleY = iconBoxY + iconBoxSize + 14;
 
-            using (Font fTitle = new Font("Georgia", 16.5f, FontStyle.Bold))
+            using (Font fTitle = new Font("Georgia", 17f, FontStyle.Bold))
             using (SolidBrush bTitle = new SolidBrush(Color.FromArgb(38, 51, 64)))
             {
                 g.DrawString(RoleTitle ?? "", fTitle, bTitle, textX, titleY);
@@ -268,18 +310,31 @@ namespace IntubaTalk
                 g.DrawString(RoleSubtitle ?? "", fDesc, bDesc, descRect, sfDesc);
             }
 
-            // 7. Bullet Feature Box
+            // ── 7. RECESSED CLAY WELL FOR FEATURES ──
             int featBoxY = descY + 44;
             int featBoxH = 145;
             Rectangle featBox = new Rectangle(textX, featBoxY, cardBody.Width - 44, featBoxH);
 
-            using (GraphicsPath fbp = GetRoundedPath(featBox, 14))
-            using (SolidBrush fbb = new SolidBrush(Color.FromArgb(244, 243, 239)))
+            using (GraphicsPath fbp = GetRoundedPath(featBox, 16))
             {
-                g.FillPath(fbb, fbp);
-                using (Pen fp = new Pen(Color.FromArgb(226, 221, 212), 1f))
+                // Soft recessed fill (slightly darker than card body)
+                using (SolidBrush fbb = new SolidBrush(Color.FromArgb(241, 239, 234)))
                 {
-                    g.DrawPath(fp, fbp);
+                    g.FillPath(fbb, fbp);
+                }
+                // Inset depression bevel (top inner shadow)
+                using (Pen fpTop = new Pen(Color.FromArgb(32, 103, 112, 108), 1.2f))
+                {
+                    g.DrawPath(fpTop, fbp);
+                }
+                // Bottom inner highlight
+                using (Pen fpBot = new Pen(Color.FromArgb(160, 255, 255, 255), 1.2f))
+                {
+                    Rectangle botR = new Rectangle(featBox.X, featBox.Y + 1, featBox.Width, featBox.Height);
+                    using (GraphicsPath bpPath = GetRoundedPath(botR, 16))
+                    {
+                        g.DrawPath(fpBot, bpPath);
+                    }
                 }
             }
 
@@ -288,21 +343,18 @@ namespace IntubaTalk
                 int py = featBoxY + 12;
                 using (Font fFeat = new Font("Segoe UI", 9.2f, FontStyle.Regular))
                 using (SolidBrush bFeat = new SolidBrush(Color.FromArgb(38, 51, 64)))
-                using (SolidBrush bCheck = new SolidBrush(AccentDark))
-                using (Pen pCheck = new Pen(AccentDark, 2f))
+                using (Pen pCheck = new Pen(AccentDark, 2.2f))
                 {
                     pCheck.StartCap = LineCap.Round;
                     pCheck.EndCap = LineCap.Round;
 
                     foreach (string item in BulletPoints)
                     {
-                        // Draw clean mini vector checkmark
                         int chkX = textX + 16;
                         int chkY = py + 4;
                         g.DrawLine(pCheck, chkX, chkY + 5, chkX + 4, chkY + 9);
                         g.DrawLine(pCheck, chkX + 4, chkY + 9, chkX + 11, chkY + 2);
 
-                        // Draw text
                         g.DrawString(item, fFeat, bFeat, textX + 34, py);
                         py += 30;
                     }
@@ -314,10 +366,11 @@ namespace IntubaTalk
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  GradientButton: Large, friendly pill button with rounded corners,
-    //  gradient fill, and smooth hover/press states.
+    //  ClayPuffyButton: 3D Puffy Claymorphism CTA Button
+    //  Large, tactile, rounded with gradient fill, top rim highlight,
+    //  bottom bevel, and physical depression press animation.
     // ─────────────────────────────────────────────────────────────────
-    public class GradientButton : Button
+    public class ClayPuffyButton : Button
     {
         public Color GradFrom { get; set; }
         public Color GradTo { get; set; }
@@ -325,11 +378,11 @@ namespace IntubaTalk
         private bool _hover = false;
         private bool _pressed = false;
 
-        public GradientButton()
+        public ClayPuffyButton()
         {
             GradFrom = Color.FromArgb(63, 167, 150);
             GradTo = Color.FromArgb(51, 138, 124);
-            Radius = 16;
+            Radius = 18;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
             FlatStyle = FlatStyle.Flat;
@@ -343,6 +396,8 @@ namespace IntubaTalk
         {
             GraphicsPath gp = new GraphicsPath();
             int d = rad * 2;
+            if (d > r.Width) d = r.Width;
+            if (d > r.Height) d = r.Height;
             gp.AddArc(r.X, r.Y, d, d, 180, 90);
             gp.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             gp.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
@@ -363,22 +418,32 @@ namespace IntubaTalk
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.Clear(Parent != null ? Parent.BackColor : Color.Transparent);
 
-            Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+            int yOffset = _pressed ? 2 : 0;
+            Rectangle r = new Rectangle(0, yOffset, Width - 1, Height - 1 - yOffset);
 
-            // Subtle drop shadow behind button when not pressed
+            // Button drop shadow (only when unpressed)
             if (!_pressed)
             {
-                Rectangle shadowR = new Rectangle(r.X + 2, r.Y + 3, r.Width, r.Height);
-                using (GraphicsPath sp = GetRoundedPath(shadowR, Radius))
-                using (SolidBrush sb = new SolidBrush(Color.FromArgb(28, 0, 0, 0)))
+                int shadowBlur = _hover ? 8 : 5;
+                for (int i = shadowBlur; i >= 1; i--)
                 {
-                    g.FillPath(sb, sp);
+                    int alpha = (int)((_hover ? 14 : 10) * ((float)(shadowBlur - i + 1) / shadowBlur));
+                    Rectangle sr = new Rectangle(r.X + 2 - i, r.Y + 4 - i, r.Width + i * 2, r.Height + i * 2);
+                    using (GraphicsPath sp = GetRoundedPath(sr, Radius + i))
+                    using (SolidBrush sb = new SolidBrush(Color.FromArgb(alpha, 25, 65, 60)))
+                    {
+                        g.FillPath(sb, sp);
+                    }
                 }
             }
 
             Color c1 = _hover ? ControlPaint.Light(GradFrom, 0.08f) : GradFrom;
             Color c2 = _hover ? ControlPaint.Light(GradTo, 0.08f) : GradTo;
-            if (_pressed) { c1 = ControlPaint.Dark(GradFrom, 0.06f); c2 = ControlPaint.Dark(GradTo, 0.06f); }
+            if (_pressed)
+            {
+                c1 = ControlPaint.Dark(GradFrom, 0.06f);
+                c2 = ControlPaint.Dark(GradTo, 0.06f);
+            }
 
             using (GraphicsPath gp = GetRoundedPath(r, Radius))
             {
@@ -387,30 +452,29 @@ namespace IntubaTalk
                     g.FillPath(lb, gp);
                 }
 
-                // Inner top-edge highlight
-                using (Pen pHi = new Pen(Color.FromArgb(70, 255, 255, 255), 1.2f))
+                // Inset puffy 3D top-edge highlight
+                using (Pen pHi = new Pen(Color.FromArgb(_pressed ? 40 : 110, 255, 255, 255), 1.8f))
                 {
                     g.DrawPath(pHi, gp);
                 }
             }
 
-            // Draw crisp centered text
             TextRenderer.DrawText(g, Text, Font, r, Color.White,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
     }
 
     // ─────────────────────────────────────────────────────────────────
-    //  ClayToolButton: Rounded pill toolbar button for secondary actions.
+    //  ClayPillButton: Rounded tool buttons with clay hover effects.
     // ─────────────────────────────────────────────────────────────────
-    public class ClayToolButton : Button
+    public class ClayPillButton : Button
     {
         private bool _hover = false;
         private readonly Color colSurface = Color.FromArgb(248, 247, 244);
         private readonly Color colLine = Color.FromArgb(215, 210, 202);
         private readonly Color colText = Color.FromArgb(38, 51, 64);
 
-        public ClayToolButton()
+        public ClayPillButton()
         {
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
                      ControlStyles.OptimizedDoubleBuffer, true);
@@ -435,7 +499,7 @@ namespace IntubaTalk
 
             Rectangle r = new Rectangle(1, 1, Width - 3, Height - 3);
             GraphicsPath gp = new GraphicsPath();
-            int rad = 10;
+            int rad = 12;
             int d = rad * 2;
             gp.AddArc(r.X, r.Y, d, d, 180, 90);
             gp.AddArc(r.Right - d, r.Y, d, d, 270, 90);
@@ -446,6 +510,19 @@ namespace IntubaTalk
             Color fill = _hover ? Color.White : colSurface;
             using (SolidBrush sb = new SolidBrush(fill)) { g.FillPath(sb, gp); }
             using (Pen p = new Pen(_hover ? Color.FromArgb(170, 165, 155) : colLine, 1f)) { g.DrawPath(p, gp); }
+
+            // Inner top highlight
+            using (Pen hi = new Pen(Color.FromArgb(140, 255, 255, 255), 1f))
+            {
+                Rectangle rHi = new Rectangle(r.X + 1, r.Y + 1, r.Width - 2, r.Height - 2);
+                using (GraphicsPath gpHi = new GraphicsPath())
+                {
+                    int d2 = (rad - 1) * 2;
+                    gpHi.AddArc(rHi.X, rHi.Y, d2, d2, 180, 90);
+                    gpHi.AddArc(rHi.Right - d2, rHi.Y, d2, d2, 270, 90);
+                    g.DrawPath(hi, gpHi);
+                }
+            }
 
             TextRenderer.DrawText(g, Text, Font, r, colText,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
@@ -469,11 +546,11 @@ namespace IntubaTalk
         private string appDir;
         private Icon customIcon;
 
-        // Theme palette
+        // Clinical Claymorphism palette
         private readonly Color colBg      = Color.FromArgb(243, 241, 236);  // Warm hospital beige
         private readonly Color colSurface = Color.FromArgb(248, 247, 244);  // Clay card surface
         private readonly Color colLine    = Color.FromArgb(221, 216, 207);  // Border line
-        private readonly Color colText    = Color.FromArgb(38, 51, 64);     // Ink text
+        private readonly Color colText    = Color.FromArgb(38, 51, 64);     // Primary text
         private readonly Color colSoft    = Color.FromArgb(93, 108, 120);   // Secondary text
         private readonly Color colMint    = Color.FromArgb(63, 167, 150);   // Patient mint
         private readonly Color colMintDk  = Color.FromArgb(51, 138, 124);   // Patient dark mint
@@ -514,19 +591,39 @@ namespace IntubaTalk
 
         private void InitUI()
         {
-            this.Text = "INTUBATALK · Select Your Role";
-            this.Size = new Size(940, 710);
-            this.MinimumSize = new Size(820, 640);
+            this.Text = "INTUBATALK · Choose Your Role";
+            this.Size = new Size(950, 720);
+            this.MinimumSize = new Size(840, 650);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.BackColor = colBg;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 
+            // Ambient background glow painting
+            this.Paint += delegate(object s, PaintEventArgs pe)
+            {
+                Graphics g = pe.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+
+                // Subtle top-right ambient mint glow
+                Rectangle trGlow = new Rectangle(Width - 360, -100, 460, 320);
+                using (GraphicsPath gp = new GraphicsPath())
+                {
+                    gp.AddEllipse(trGlow);
+                    using (PathGradientBrush pgb = new PathGradientBrush(gp))
+                    {
+                        pgb.CenterColor = Color.FromArgb(16, 63, 167, 150);
+                        pgb.SurroundColors = new Color[] { Color.FromArgb(0, 63, 167, 150) };
+                        g.FillPath(pgb, gp);
+                    }
+                }
+            };
+
             // ══════════════════ 1. HEADER ══════════════════
             Panel pnlHeader = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 112,
+                Height = 114,
                 BackColor = colSurface,
                 Padding = new Padding(28, 0, 28, 0)
             };
@@ -541,13 +638,13 @@ namespace IntubaTalk
                     g.DrawLine(p, 0, pnlHeader.Height - 1, pnlHeader.Width, pnlHeader.Height - 1);
                 }
 
-                // Brand Mark: rounded square with mint gradient + soundwave bars
-                int markSize = 52;
+                // Brand Mark: puffy 3D rounded square with mint gradient + soundwave bars
+                int markSize = 54;
                 int markX = 26;
                 int markY = 18;
                 Rectangle markRect = new Rectangle(markX, markY, markSize, markSize);
                 GraphicsPath markPath = new GraphicsPath();
-                int md = 28;
+                int md = 30;
                 markPath.AddArc(markRect.X, markRect.Y, md, md, 180, 90);
                 markPath.AddArc(markRect.Right - md, markRect.Y, md, md, 270, 90);
                 markPath.AddArc(markRect.Right - md, markRect.Bottom - md, md, md, 0, 90);
@@ -558,7 +655,7 @@ namespace IntubaTalk
                 {
                     g.FillPath(lb, markPath);
                 }
-                using (Pen hp = new Pen(Color.FromArgb(90, 255, 255, 255), 1.5f))
+                using (Pen hp = new Pen(Color.FromArgb(100, 255, 255, 255), 1.8f))
                 {
                     g.DrawPath(hp, markPath);
                 }
@@ -566,7 +663,7 @@ namespace IntubaTalk
                 // 3 Soundwave bars
                 int cx = markX + markSize / 2;
                 int cy = markY + markSize / 2;
-                using (Pen wp = new Pen(Color.FromArgb(240, 255, 255, 255), 2.8f))
+                using (Pen wp = new Pen(Color.FromArgb(245, 255, 255, 255), 2.8f))
                 {
                     wp.StartCap = LineCap.Round;
                     wp.EndCap = LineCap.Round;
@@ -584,7 +681,7 @@ namespace IntubaTalk
                 ForeColor = colText,
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(90, 16)
+                Location = new Point(92, 16)
             };
 
             Label lblTagline = new Label
@@ -594,17 +691,17 @@ namespace IntubaTalk
                 ForeColor = colSoft,
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(92, 52)
+                Location = new Point(94, 52)
             };
 
             Label lblPrompt = new Label
             {
-                Text = "Choose your role to get started:",
+                Text = "Select your role to get started:",
                 Font = new Font("Segoe UI", 10f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(120, 130, 140),
                 AutoSize = true,
                 BackColor = colSurface,
-                Location = new Point(92, 78)
+                Location = new Point(94, 79)
             };
 
             lblStatus = new Label
@@ -615,7 +712,7 @@ namespace IntubaTalk
                 AutoSize = true,
                 BackColor = colSurface,
                 Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(680, 22)
+                Location = new Point(690, 22)
             };
 
             pnlHeader.Controls.Add(lblTitle);
@@ -624,14 +721,14 @@ namespace IntubaTalk
             pnlHeader.Controls.Add(lblStatus);
             this.Controls.Add(pnlHeader);
 
-            // ══════════════════ 2. ROLE CARDS (PATIENT VS NURSE) ══════════════════
+            // ══════════════════ 2. ROLE SELECTION CARDS ══════════════════
             TableLayoutPanel roleGrid = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1,
                 Padding = new Padding(16, 18, 16, 12),
-                BackColor = colBg
+                BackColor = Color.Transparent
             };
             roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
             roleGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
@@ -641,11 +738,11 @@ namespace IntubaTalk
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(8, 6, 8, 6),
-                RoleBadge = "FOR THE PATIENT",
+                RoleBadge = "BEDSIDE PATIENT",
                 BadgeBg = Color.FromArgb(217, 239, 233),
                 BadgeText = Color.FromArgb(35, 95, 85),
-                RoleTitle = "Patient Tablet",
-                RoleSubtitle = "Designed for intubated or non-verbal ICU patients to communicate instantly without vocal cords.",
+                RoleTitle = "I Am the Patient",
+                RoleSubtitle = "For intubated or non-verbal ICU patients to communicate instantly without vocal cords.",
                 BulletPoints = new string[] {
                     "1-Tap needs: Breathing, Suction, Pain, Water",
                     "Visual 0 to 10 pain rating scale",
@@ -666,11 +763,11 @@ namespace IntubaTalk
             {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(8, 6, 8, 6),
-                RoleBadge = "FOR THE NURSE / CLINICIAN",
+                RoleBadge = "NURSE STATION",
                 BadgeBg = Color.FromArgb(217, 231, 239),
                 BadgeText = Color.FromArgb(32, 75, 102),
-                RoleTitle = "Nurse Dashboard",
-                RoleSubtitle = "Designed for bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.",
+                RoleTitle = "I Am the Nurse",
+                RoleSubtitle = "For bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.",
                 BulletPoints = new string[] {
                     "Live incoming feed paired via 4-digit code",
                     "Urgent repeating sirens and chimes",
@@ -713,13 +810,16 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayToolButton btnDual = new ClayToolButton { Text = "👥 Dual Simulator (Split)", Width = 180 };
+            ClayPillButton btnWeb = new ClayPillButton { Text = "✨ Open Web View", Width = 150 };
+            btnWeb.Click += delegate { LaunchApp("/choose"); };
+            ClayPillButton btnDual = new ClayPillButton { Text = "👥 Dual Simulator", Width = 150 };
             btnDual.Click += delegate { LaunchApp("/dual"); };
-            ClayToolButton btnBoard = new ClayToolButton { Text = "📋 Printable Board", Width = 140 };
+            ClayPillButton btnBoard = new ClayPillButton { Text = "📋 Backup Board", Width = 135 };
             btnBoard.Click += delegate { LaunchApp("/board"); };
-            ClayToolButton btnWifi = new ClayToolButton { Text = "🌐 Bedside Wi-Fi Link", Width = 150 };
+            ClayPillButton btnWifi = new ClayPillButton { Text = "🌐 Wi-Fi Link", Width = 125 };
             btnWifi.Click += delegate { CopyLanUrl(); };
 
+            flowLeft.Controls.Add(btnWeb);
             flowLeft.Controls.Add(btnDual);
             flowLeft.Controls.Add(btnBoard);
             flowLeft.Controls.Add(btnWifi);
@@ -733,9 +833,9 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayToolButton btnHelp = new ClayToolButton { Text = "❓ How It Works", Width = 125 };
+            ClayPillButton btnHelp = new ClayPillButton { Text = "❓ How It Works", Width = 125 };
             btnHelp.Click += delegate { ShowHelp(); };
-            ClayToolButton btnRestart = new ClayToolButton { Text = "🔄 Restart Server", Width = 125 };
+            ClayPillButton btnRestart = new ClayPillButton { Text = "🔄 Restart Server", Width = 125 };
             btnRestart.Click += delegate { RestartServer(); };
 
             flowRight.Controls.Add(btnHelp);
@@ -752,12 +852,12 @@ namespace IntubaTalk
         private void InitTray()
         {
             trayMenu = new ContextMenuStrip();
-            trayMenu.Items.Add("📱 Open Patient Tablet", null, delegate { LaunchApp("/?fresh=1"); });
+            trayMenu.Items.Add("📱 Open Patient Tablet (New Login)", null, delegate { LaunchApp("/?fresh=1"); });
             trayMenu.Items.Add("🩺 Open Nurse Dashboard", null, delegate { LaunchApp("/nurse?fresh=1"); });
             trayMenu.Items.Add("👥 Open Dual Simulator", null, delegate { LaunchApp("/dual"); });
             trayMenu.Items.Add("📋 Open Printable Board", null, delegate { LaunchApp("/board"); });
             trayMenu.Items.Add("-");
-            trayMenu.Items.Add("Select Role / Open Hub", null, delegate { RestoreFromTray(); });
+            trayMenu.Items.Add("Open Role Chooser Hub", null, delegate { RestoreFromTray(); });
             trayMenu.Items.Add("Copy Bedside Wi-Fi URL", null, delegate { CopyLanUrl(); });
             trayMenu.Items.Add("-");
             trayMenu.Items.Add("Exit Application", null, delegate { Application.Exit(); });
@@ -940,8 +1040,8 @@ namespace IntubaTalk
             MessageBox.Show(
                 "INTUBATALK — Quick Guide:\n\n" +
                 "1. Select Patient Role:\n" +
-                "   Opens the Bedside Tablet starting fresh from the registration wizard.\n" +
-                "   Enter the patient name and bed number to receive a 4-digit room code.\n\n" +
+                "   Opens the Bedside Tablet. Every time this is opened, a new patient login\n" +
+                "   is required (Patient Name & Bed Number) to generate a fresh room code.\n\n" +
                 "2. Select Nurse Role:\n" +
                 "   Opens the Nurse Dashboard. Enter the patient's 4-digit code to pair instantly.\n\n" +
                 "3. Dual Simulator:\n" +

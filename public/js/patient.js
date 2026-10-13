@@ -605,31 +605,25 @@ h1{font-size:28px;margin:16px 22px 2px;letter-spacing:.01em}.sub{margin:0 22px 1
 }
 
 // ------------------------------------------------------------------ boot
+// Every time the app is opened or reopened, a new patient login is required.
 
 document.addEventListener("click", () => audio.unlock(), { once: true });
 hydrateIcons();
 startAmbient();
 
-const urlParams = new URLSearchParams(window.location.search);
-const isFresh = urlParams.get("fresh") === "1" || urlParams.get("reset") === "1";
+// Wipe any previous session so the patient always inputs a new login
+sync.clearSession();
+profile = { ...DEFAULT_PROFILE };
+room = null;
 
-if (isFresh) {
-  sync.clearSession();
-  profile = { ...DEFAULT_PROFILE };
-  room = null;
+// Present the login screen
+$("#wizard").classList.remove("hidden");
+$("#app").classList.add("hidden");
+if ($("#inName")) {
+  $("#inName").value = "";
+  setTimeout(() => { try { $("#inName").focus(); } catch { /* noop */ } }, 200);
 }
-
-if (!isFresh && profile.name && sync.getRememberedRoom()) {
-  (async () => {
-    try { room = await sync.register({ name: profile.name, bed: profile.bed }); }
-    catch { room = sync.getRememberedRoom(); }
-    mountApp();
-  })();
-} else {
-  $("#wizard").classList.remove("hidden");
-  if ($("#inName")) $("#inName").value = "";
-  if ($("#inBed")) $("#inBed").value = "";
-  $("#btnCreate").addEventListener("click", startSession);
-  $("#gateForm").addEventListener("submit", (e) => { e.preventDefault(); startSession(); });
-  $("#inName").addEventListener("keydown", (e) => { if (e.key === "Enter") startSession(); });
-}
+if ($("#inBed")) $("#inBed").value = "";
+$("#btnCreate").addEventListener("click", startSession);
+$("#gateForm").addEventListener("submit", (e) => { e.preventDefault(); startSession(); });
+$("#inName").addEventListener("keydown", (e) => { if (e.key === "Enter") startSession(); });

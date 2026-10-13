@@ -37,10 +37,10 @@ export const getRoom = () => room;
 // The room code persisted on this device (survives reloads).
 export const getRememberedRoom = () => cacheRead(LS_ROOM);
 
-// Patient creates a fresh room (or resumes a remembered one).
-export const register = async ({ name, bed }) => {
-  const remembered = cacheRead(LS_ROOM);
-  const r = await post("/session", { name, bed, room: remembered || undefined });
+// Patient creates a fresh room for a new session.
+export const register = async ({ name, bed, forceNew = true }) => {
+  const remembered = forceNew ? undefined : cacheRead(LS_ROOM);
+  const r = await post("/session", { name, bed, room: remembered });
   if (!r.ok) throw new Error(`session failed (${r.status})`);
   const data = await r.json();
   room = data.room;
