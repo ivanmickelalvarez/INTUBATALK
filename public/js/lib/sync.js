@@ -5,8 +5,9 @@
 import { uid } from "./util.js";
 
 const LS_ROOM = "it_room";
-const handlers = { request: [], ack: [], clear: [], profile: [] };
-let room = null;          // room code this page is attached to
+const handlers = { request: [], ack: [], clear: [], profile: [], profiles: [] };
+let room = null;          // primary room code (for patient tablet)
+let rooms = [];           // array of room codes (for multi-patient nurse dashboard)
 let pollTimer = null;     // behind null until register/attach
 let after = 0;            // last server message id seen
 let seenCmids = new Set();
@@ -32,7 +33,8 @@ const post = (path, body) =>
 
 const cacheRead = (k) => { try { return localStorage.getItem(k) || sessionStorage.getItem(k); } catch { return null; } };
 
-export const getRoom = () => room;
+export const getRoom = () => room || rooms[0] || null;
+export const getRooms = () => rooms.slice();
 
 // The room code persisted on this device (survives reloads).
 export const getRememberedRoom = () => cacheRead(LS_ROOM);
@@ -44,6 +46,7 @@ export const register = async ({ name, bed, forceNew = true }) => {
   if (!r.ok) throw new Error(`session failed (${r.status})`);
   const data = await r.json();
   room = data.room;
+  rooms = [room];
   try {
     localStorage.setItem(LS_ROOM, room);
     sessionStorage.setItem(LS_ROOM, room);
@@ -53,16 +56,48 @@ export const register = async ({ name, bed, forceNew = true }) => {
   return room;
 };
 
-// Nurse passively watches a room without creating a session.
-export const attach = (code) => {
-  room = code;
-  try { sessionStorage.setItem(LS_ROOM, code); } catch { /* noop */ }
+// Nurse passively watches a room or list of rooms.
+export const attach = (codeOrCodes) => {
+  if (Array.isArray(codeOrCodes)) {
+    rooms = Array.from(new Set(codeOrCodes.filter(Boolean)));
+    room = rooms[0] || null;
+  } else if (typeof codeOrCodes === "string" && codeOrCodes.includes(",")) {
+    rooms = Array.from(new Set(codeOrCodes.split(",").map(c => c.trim()).filter(Boolean)));
+    room = rooms[0] || null;
+  } else {
+    room = codeOrCodes;
+    rooms = codeOrCodes ? [codeOrCodes] : [];
+  }
+  try { sessionStorage.setItem(LS_ROOM, rooms.join(",")); } catch { /* noop */ }
   startPolling();
+};
+
+export const attachRooms = (list) => {
+  rooms = Array.from(new Set((list || []).filter(Boolean)));
+  room = rooms[0] || null;
+  try { sessionStorage.setItem(LS_ROOM, rooms.join(",")); } catch { /* noop */ }
+  startPolling();
+  pollOnce();
+};
+
+export const addRoom = (code) => {
+  if (!code) return;
+  if (!rooms.includes(code)) rooms.push(code);
+  if (!room) room = code;
+  try { sessionStorage.setItem(LS_ROOM, rooms.join(",")); } catch { /* noop */ }
+  pollOnce();
+};
+
+export const removeRoom = (code) => {
+  rooms = rooms.filter(c => c !== code);
+  if (room === code) room = rooms[0] || null;
+  try { sessionStorage.setItem(LS_ROOM, rooms.join(",")); } catch { /* noop */ }
 };
 
 // Completely wipe session and profile so app starts fresh from the beginning.
 export const clearSession = () => {
   room = null;
+  rooms = [];
   profile = null;
   try {
     localStorage.removeItem(LS_ROOM);
@@ -121,14 +156,16 @@ export const sendMessage = ({ msg }) => sendNeed({ need: "message", label: "Mess
 export const sendEmergency = ({ msg = "I need help now." } = {}) =>
   sendItem({ kind: "emergency", msg });
 
-export const sendAck = (cmid) => {
-  if (room) post("/ack", { room, cmid }).catch(() => {});
-  say({ type: "ack", cmid, ts: Date.now() });
+export const sendAck = (cmid, targetRoom, nurseName) => {
+  const r = targetRoom || room;
+  if (r) post("/ack", { room: r, cmid, nurse: nurseName || undefined }).catch(() => {});
+  say({ type: "ack", cmid, room: r, nurse: nurseName || null, ts: Date.now() });
 };
 
-export const sendClear = (cmid) => {
-  if (room) post("/clear", { room, cmid }).catch(() => {});
-  say({ type: "clear", cmid, ts: Date.now() });
+export const sendClear = (cmid, targetRoom) => {
+  const r = targetRoom || room;
+  if (r) post("/clear", { room: r, cmid }).catch(() => {});
+  say({ type: "clear", cmid, room: r, ts: Date.now() });
 };
 
 // ---- receiving ------------------------------------------------------------------
@@ -142,6 +179,7 @@ function dispatch(msg) {
     case "ack": handlers.ack.forEach((f) => f(msg)); break;
     case "clear": handlers.clear.forEach((f) => f(msg)); break;
     case "profile": handlers.profile.forEach((f) => f(msg)); break;
+    case "profiles": handlers.profiles.forEach((f) => f(msg)); break;
   }
 }
 
@@ -152,16 +190,17 @@ export const on = (type, fn) => {
 // ---- server polling (online mode) -------------------------------------------------
 
 async function pollOnce() {
-  if (!room) return;
+  const activeRooms = rooms.length ? rooms : (room ? [room] : []);
+  if (!activeRooms.length) return;
   try {
-    const r = await fetch(`/api/poll?room=${room}&after=${after}`);
+    const query = activeRooms.join(",");
+    const r = await fetch(`/api/poll?rooms=${encodeURIComponent(query)}&after=${after}`);
     if (!r.ok) return;
     const data = await r.json();
     for (const m of data.messages || []) {
       after = Math.max(after, m.id);
       const cmid = m.cmid || `s${m.id}`;
       if (m.kind === "request" || m.kind === "emergency") {
-        // dispatch() owns the seen-set: it skips + marks, then fans out.
         dispatch({
           type: "request",
           cmid,
@@ -171,11 +210,12 @@ async function pollOnce() {
           room: m.room, ts: m.created_ms,
         });
       } else if (m.kind === "ack") {
-        dispatch({ type: "ack", cmid, ts: m.created_ms });
+        dispatch({ type: "ack", cmid, room: m.room, nurse: m.nurse, ts: m.created_ms });
       } else if (m.kind === "clear") {
-        dispatch({ type: "clear", cmid, ts: m.created_ms });
+        dispatch({ type: "clear", cmid, room: m.room, ts: m.created_ms });
       }
     }
+    if (data.profiles) dispatch({ type: "profiles", profiles: data.profiles, ts: data.now });
     if (data.profile) dispatch({ type: "profile", profile: data.profile, caps: data.caps || [], ts: data.now });
   } catch { /* offline — keep trying */ }
 }

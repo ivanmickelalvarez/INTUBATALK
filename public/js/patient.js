@@ -90,13 +90,14 @@ function showEmgBanner() {
   $("#btnCancelEmg")?.addEventListener("click", clearEmergency);
 }
 
-function updateEmgBannerAck() {
+function updateEmgBannerAck(nurseName) {
   const b = $("#emgBanner");
   if (!b) return;
+  const who = nurseName ? esc(nurseName) : "Nurse";
   const msgEl = b.querySelector(".emg-banner-msg");
-  if (msgEl) msgEl.textContent = "Nurse acknowledged your call! Help is on the way.";
+  if (msgEl) msgEl.textContent = `${who} acknowledged your call! Help is on the way.`;
   const badgeEl = b.querySelector(".emg-banner-badge");
-  if (badgeEl) badgeEl.innerHTML = `${svg("check")} NURSE ON THE WAY (ACKNOWLEDGED)`;
+  if (badgeEl) badgeEl.innerHTML = `${svg("check")} ${who.toUpperCase()} ON THE WAY (ACKNOWLEDGED)`;
 }
 
 function hideEmgBanner() {
@@ -145,12 +146,13 @@ function mountApp() {
 }
 
 function wireIncoming() {
-  sync.on("ack", () => {
+  sync.on("ack", (msg) => {
     audio.blip();
     vibrate(30);
     audio.alarmStop();
-    updateEmgBannerAck();
-    toast("The nurse acknowledged. Help is on the way.");
+    updateEmgBannerAck(msg?.nurse);
+    const who = msg?.nurse ? `${msg.nurse}` : "The nurse";
+    toast(`${who} acknowledged. Help is on the way.`);
   });
   sync.on("clear", () => {
     document.body.classList.remove("emg-active");

@@ -171,6 +171,215 @@
 .alarm-card .sub { color: var(--text-soft); margin-top: 8px; font-size: 14.5px; }
 .alarm-card .act { margin-top: 22px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
+/* Nurse Identity Chip */
+.nurse-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: var(--clay-sm);
+  border-radius: 999px;
+  padding: 4px 10px 4px 5px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 260px;
+}
+.nurse-chip .nurse-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4288b3, #2e668c);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+  box-shadow: inset 1px 1px 2px rgba(255,255,255,0.4);
+}
+.nurse-chip .nurse-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  overflow: hidden;
+}
+.nurse-chip .nurse-name {
+  font-weight: 800;
+  color: var(--text);
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nurse-chip .nurse-unit {
+  font-size: 10.5px;
+  color: var(--text-soft);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Patient List in Sidebar */
+.patient-rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.patient-card-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,.65);
+  border-radius: var(--radius-md);
+  box-shadow: var(--clay-sm);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  position: relative;
+  word-break: break-word;
+}
+.patient-card-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--clay-raised);
+}
+.patient-card-item.selected {
+  border-color: var(--accent);
+  background: linear-gradient(145deg, #f7fcfb, #eef7f5);
+  box-shadow: var(--clay-raised);
+}
+.patient-card-item .p-meta {
+  flex: 1;
+  min-width: 0;
+}
+.patient-card-item .p-title {
+  font-weight: 800;
+  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+.patient-card-item .p-sub {
+  font-size: 12px;
+  color: var(--text-soft);
+  margin-top: 2px;
+  font-weight: 600;
+}
+.patient-card-item .p-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.patient-card-item .btn-rm-patient {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.patient-card-item .btn-rm-patient:hover {
+  background: var(--alert-soft);
+  color: var(--alert);
+}
+.badge-count {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: #235f55;
+}
+.badge-count.emg {
+  background: var(--alert-soft);
+  color: #a63a3a;
+}
+
+/* Patient filter chips in feed */
+.patient-filter-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.patient-pill {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.patient-pill:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+.patient-pill.active {
+  background: var(--accent-soft);
+  color: #235f55;
+  border-color: var(--accent);
+  box-shadow: var(--clay-sm);
+}
+
+/* Room tag in request card */
+.req .roomtag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+/* Nurse profile switcher list in dialog */
+.nurse-profiles-list {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 14px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.nurse-profile-card {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--clay-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.nurse-profile-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  background: var(--surface);
+}
+.nurse-profile-card.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 /* Print board (kept from board.html design, used when printing from dashboard) */
 @media print {
   body { background: #fff; }

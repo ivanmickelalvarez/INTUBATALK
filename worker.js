@@ -76,6 +76,7 @@ async function api(request, env, url) {
     if (p === "/api/clear" && request.method === "POST") return await clearAll(request, env);
     if (p === "/api/profile" && request.method === "POST") return await profile(request, env);
     if (p === "/api/presence" && request.method === "POST") return await presence(request, env);
+    if (p === "/api/room" && request.method === "GET") return await roomInfo(url, env);
     if (p === "/api/poll" && request.method === "GET") return await poll(env, url);
   } catch (err) {
     return E(String(err?.message ?? err), 500);
@@ -89,14 +90,30 @@ const readBody = async (request) => {
 
 const ROOM_RE = /^\d{4}$/;
 
+async function roomInfo(url, env) {
+  const code = url.searchParams.get("code") || url.searchParams.get("room") || "";
+  if (!ROOM_RE.test(code)) return E("bad room");
+  const row = await env.DB.prepare("SELECT room, name, bed, last_seen_ms FROM rooms WHERE room=?").bind(code).first();
+  if (!row) return J({ exists: false, room: code });
+  return J({
+    exists: true,
+    room: row.room,
+    name: row.name,
+    bed: row.bed,
+    online: (Date.now() - (row.last_seen_ms || 0)) < 15000,
+  });
+}
+
 async function session(request, env) {
   const b = await readBody(request);
   const name = String(b.name ?? "").trim().slice(0, 40) || "Patient";
   const bed = String(b.bed ?? "").trim().slice(0, 12);
   if (ROOM_RE.test(b.room)) {
-    const upd = await env.DB.prepare("UPDATE rooms SET name=?, bed=?, last_seen_ms=? WHERE room=?")
-      .bind(name, bed, Date.now(), b.room).run();
-    if (upd.meta.changes > 0) return J({ ok: true, room: b.room });
+    await env.DB.prepare(
+      "INSERT INTO rooms (room, name, bed, created_ms, last_seen_ms) VALUES (?,?,?,?,?) " +
+      "ON CONFLICT(room) DO UPDATE SET name=excluded.name, bed=excluded.bed, last_seen_ms=excluded.last_seen_ms"
+    ).bind(b.room, name, bed, Date.now(), Date.now()).run();
+    return J({ ok: true, room: b.room });
   }
   // new code, retry in the rare collision case
   for (let i = 0; i < 8; i++) {
@@ -139,13 +156,14 @@ async function ack(request, env) {
   const b = await readBody(request);
   if (!ROOM_RE.test(b.room)) return E("bad room");
   const cmid = String(b.cmid ?? "").slice(0, 40);
+  const nurse = String(b.nurse ?? b.nurseName ?? "").slice(0, 40);
   if (cmid) {
     await env.DB.prepare("UPDATE messages SET status='ack' WHERE room=? AND cmid=?").bind(b.room, cmid).run();
   }
   await env.DB.prepare(
     "INSERT INTO messages (room, cmid, kind, need, sentence, patient, bed, created_ms) VALUES (?,?,?,?,?,?,?,?)"
-  ).bind(b.room, cmid || null, "ack", "ack", "Nurse acknowledged", String(b.patient ?? "").slice(0, 40) || "", String(b.bed ?? "").slice(0, 12), Date.now()).run();
-  return J({ ok: true });
+  ).bind(b.room, cmid || null, "ack", "ack", nurse ? `${nurse} acknowledged` : "Nurse acknowledged", String(b.patient ?? "").slice(0, 40) || "", String(b.bed ?? "").slice(0, 12), Date.now()).run();
+  return J({ ok: true, nurse: nurse || null });
 }
 
 async function clearAll(request, env) {
@@ -187,24 +205,31 @@ async function presence(request, env) {
 }
 
 async function poll(env, url) {
-  const room = url.searchParams.get("room") || "";
+  const rawRooms = url.searchParams.get("rooms") || url.searchParams.get("room") || "";
   const after = Math.max(0, Number(url.searchParams.get("after") ?? 0) || 0);
-  if (!ROOM_RE.test(room)) return E("bad room");
+  const roomList = rawRooms.split(",").map((r) => r.trim()).filter((r) => ROOM_RE.test(r));
+  if (!roomList.length) return E("bad room");
+
+  const placeholders = roomList.map(() => "?").join(",");
   const { results } = await env.DB.prepare(
-    `SELECT id, cmid, kind, need, label, sentence, urgent, risk, status, patient, bed, created_ms
-     FROM messages WHERE room = ? AND id > ? ORDER BY id ASC LIMIT 200`
-  ).bind(room, after).all();
-  const rp = await env.DB.prepare(
-    `SELECT name, bed, last_seen_ms FROM rooms WHERE room = ?`
-  ).bind(room).first();
-  const capsRow = await env.DB.prepare("SELECT caps FROM room_caps WHERE room = ?").bind(room).first();
-  let caps = [];
-  try { caps = capsRow ? JSON.parse(capsRow.caps).caps ?? [] : []; } catch { caps = []; }
+    `SELECT id, room, cmid, kind, need, label, sentence, urgent, risk, status, patient, bed, created_ms
+     FROM messages WHERE room IN (${placeholders}) AND id > ? ORDER BY id ASC LIMIT 250`
+  ).bind(...roomList, after).all();
+
+  const profiles = {};
+  for (const rCode of roomList) {
+    const rp = await env.DB.prepare(
+      `SELECT name, bed, last_seen_ms FROM rooms WHERE room = ?`
+    ).bind(rCode).first();
+    profiles[rCode] = rp ? { name: rp.name, bed: rp.bed, online: Date.now() - rp.last_seen_ms < 15000 } : { name: "Patient", bed: "", online: false };
+  }
+  const primaryCode = roomList[0];
+
   return J({
     messages: results,
     lastId: results.length ? results[results.length - 1].id : after,
-    profile: rp ? { name: rp.name, bed: rp.bed, online: Date.now() - rp.last_seen_ms < 15000 } : null,
-    caps,
+    profile: profiles[primaryCode] || null,
+    profiles,
     now: Date.now(),
   });
 }

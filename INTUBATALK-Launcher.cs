@@ -771,10 +771,10 @@ namespace IntubaTalk
                 RoleTitle = "I Am the Nurse",
                 RoleSubtitle = "For bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.",
                 BulletPoints = new string[] {
-                    "Live incoming feed paired via 4-digit code",
-                    "Urgent repeating sirens and chimes",
-                    "Instant acknowledge (\"Nurse on the way\")",
-                    "Text-to-speech speaker reads requests aloud"
+                    "Individual nurse dashboard & station switcher",
+                    "Multi-patient bed monitor (simultaneous rooms)",
+                    "Instant acknowledge with nurse attribution",
+                    "Urgent repeating sirens & audible TTS speaker"
                 },
                 ButtonText = "Select Nurse Role",
                 AccentColor = colTeal,

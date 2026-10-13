@@ -93,10 +93,19 @@ async function handleApi(req, res, pathname) {
     const name = String(b.name ?? "").trim().slice(0, 40) || "Patient";
     const bed = String(b.bed ?? "").trim().slice(0, 12);
     let room = b.room;
-    if (ROOM_RE.test(room) && store.rooms[room]) {
-      store.rooms[room].name = name;
-      store.rooms[room].bed = bed;
-      store.rooms[room].last_seen_ms = Date.now();
+    if (ROOM_RE.test(room)) {
+      if (!store.rooms[room]) {
+        store.rooms[room] = {
+          room, name, bed,
+          created_ms: Date.now(),
+          last_seen_ms: Date.now(),
+          caps: [],
+        };
+      } else {
+        store.rooms[room].name = name;
+        store.rooms[room].bed = bed;
+        store.rooms[room].last_seen_ms = Date.now();
+      }
       saveStore();
       return sendJSON(res, { ok: true, room });
     }
@@ -149,9 +158,13 @@ async function handleApi(req, res, pathname) {
     const b = await parseBody(req);
     if (!ROOM_RE.test(b.room)) return sendError(res, "bad room");
     const cmid = String(b.cmid ?? "").slice(0, 40);
+    const nurse = String(b.nurse ?? b.nurseName ?? "").slice(0, 40);
     if (cmid) {
       store.messages.forEach((m) => {
-        if (m.room === b.room && m.cmid === cmid) m.status = "ack";
+        if (m.room === b.room && m.cmid === cmid) {
+          m.status = "ack";
+          if (nurse) m.nurse = nurse;
+        }
       });
     }
     store.messages.push({
@@ -160,14 +173,15 @@ async function handleApi(req, res, pathname) {
       cmid: cmid || null,
       kind: "ack",
       need: "ack",
-      sentence: "Nurse acknowledged",
+      sentence: nurse ? `${nurse} acknowledged` : "Nurse acknowledged",
       status: "ack",
+      nurse: nurse || null,
       patient: String(b.patient ?? "").slice(0, 40),
       bed: String(b.bed ?? "").slice(0, 12),
       created_ms: Date.now(),
     });
     saveStore();
-    return sendJSON(res, { ok: true });
+    return sendJSON(res, { ok: true, nurse: nurse || null });
   }
 
   // POST /api/clear
@@ -220,28 +234,58 @@ async function handleApi(req, res, pathname) {
     return sendJSON(res, { ok: true, known: false });
   }
 
-  // GET /api/poll
-  if (pathname === "/api/poll" && req.method === "GET") {
-    const room = query.room || "";
-    const after = Math.max(0, parseInt(query.after ?? "0", 10) || 0);
-    if (!ROOM_RE.test(room)) return sendError(res, "bad room");
-
-    const matched = store.messages
-      .filter((m) => m.room === room && m.id > after)
-      .slice(0, 200);
-
-    const r = store.rooms[room];
-    const profile = r ? {
+  // GET /api/room (check if a room code exists and get patient metadata)
+  if (pathname === "/api/room" && req.method === "GET") {
+    const code = query.code || query.room || "";
+    if (!ROOM_RE.test(code)) return sendError(res, "bad room");
+    const r = store.rooms[code];
+    if (!r) return sendJSON(res, { exists: false, room: code });
+    return sendJSON(res, {
+      exists: true,
+      room: r.room,
       name: r.name,
       bed: r.bed,
       online: Date.now() - r.last_seen_ms < 15000,
-    } : null;
+    });
+  }
+
+  // GET /api/poll (supports single room or multiple comma-separated rooms)
+  if (pathname === "/api/poll" && req.method === "GET") {
+    const rawRooms = query.rooms || query.room || "";
+    const after = Math.max(0, parseInt(query.after ?? "0", 10) || 0);
+    const roomList = rawRooms.split(",").map(r => r.trim()).filter(r => ROOM_RE.test(r));
+    if (!roomList.length) return sendError(res, "bad room");
+
+    const matched = store.messages
+      .filter((m) => roomList.includes(m.room) && m.id > after)
+      .slice(0, 300);
+
+    const profiles = {};
+    for (const rCode of roomList) {
+      const r = store.rooms[rCode];
+      profiles[rCode] = r ? {
+        name: r.name,
+        bed: r.bed,
+        online: Date.now() - r.last_seen_ms < 15000,
+        caps: r.caps || [],
+      } : {
+        name: "Patient",
+        bed: "",
+        online: false,
+        caps: [],
+      };
+    }
+
+    const primaryCode = roomList[0];
+    const rPrimary = store.rooms[primaryCode];
+    const primaryProfile = profiles[primaryCode] || null;
 
     return sendJSON(res, {
       messages: matched,
       lastId: matched.length ? matched[matched.length - 1].id : after,
-      profile,
-      caps: r?.caps || [],
+      profile: primaryProfile,
+      profiles,
+      caps: rPrimary?.caps || [],
       now: Date.now(),
     });
   }
@@ -348,6 +392,8 @@ function startListening(port, maxAttempts = 10) {
   });
 }
 
-startListening(PORT);
+if (require.main === module) {
+  startListening(PORT);
+}
 
 module.exports = { server, store };

@@ -22,17 +22,62 @@
       <span class="n-logo-word">INTUBATALK</span>
       <span class="dash-word">Nurse Dashboard</span>
     </a>
-    <span class="badge" id="codeTag">code · · · ·</span>
+    <div id="nurseProfileChip" class="nurse-chip hidden"></div>
+    <span class="badge" id="codeTag">0 Beds</span>
     <span style="flex:1"></span>
-    <a class="btn btn-ghost btn-sm" href="/dual" target="_blank"><span data-ic="position"></span>Dual view</a>
-    <a class="btn btn-ghost btn-sm" href="/board" target="_blank"><span data-ic="board"></span>Board</a>
+    <button class="btn btn-mint btn-sm" id="btnAddPatient"><span data-ic="plus"></span>Connect bed</button>
+    <button class="btn btn-ghost btn-sm" id="btnSwitchNurse"><span data-ic="repeat"></span>Switch nurse</button>
     <button class="btn btn-ghost btn-sm" id="btnTestSound"><span data-ic="speaker"></span>Test sound</button>
-    <button class="btn btn-ghost btn-sm" id="btnAddPatient">＋ Add patient</button>
     <button class="btn btn-ghost btn-sm" id="btnMute"><span data-ic="mute"></span>Sound</button>
     <button class="btn btn-ghost btn-sm" id="btnNotify"><span data-ic="bell"></span>Enable alerts</button>
+    <a class="btn btn-ghost btn-sm" href="/dual" target="_blank"><span data-ic="position"></span>Dual view</a>
+    <a class="btn btn-ghost btn-sm" href="/board" target="_blank"><span data-ic="board"></span>Board</a>
   </header>
 
   <main class="n-main" id="main"></main>
+
+  <!-- Connect Bed Dialog -->
+  <dialog id="dlgConnectBed" class="clay">
+    <h3 class="dlg-title">Connect Bedside Tablet</h3>
+    <p style="color:var(--text-soft);font-size:14px;margin:0 0 14px;line-height:1.5">
+      Enter the 4-digit room code shown in the top bar of the patient's bedside tablet:
+    </p>
+    <div style="margin-bottom:14px">
+      <label for="inNewRoom" style="display:block;font-size:13px;font-weight:700;color:var(--text-soft);margin-bottom:6px">Room Code</label>
+      <input id="inNewRoom" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:22px;font-weight:800;letter-spacing:6px;text-align:center;width:100%" placeholder="····" maxlength="4" inputmode="numeric">
+      <div id="connectRoomStatus" style="font-size:13px;font-weight:600;margin-top:6px;min-height:20px;color:var(--text-soft)"></div>
+    </div>
+    <div class="dlg-actions">
+      <button class="btn btn-ghost" id="btnCloseConnectDlg" type="button">Cancel</button>
+      <button class="btn btn-mint" id="btnConfirmConnect" type="button">Connect Patient</button>
+    </div>
+  </dialog>
+
+  <!-- Nurse Profile Switcher Dialog -->
+  <dialog id="dlgNurseProfile" class="clay">
+    <h3 class="dlg-title">Nurse Station Profiles</h3>
+    <p style="color:var(--text-soft);font-size:14px;margin:0 0 12px;line-height:1.5">
+      Select an existing nurse station or create a new profile for your shift:
+    </p>
+    <div id="savedNursesList" class="nurse-profiles-list"></div>
+    <div style="border-top:1px solid var(--line);padding-top:14px;margin-top:14px">
+      <h4 style="margin:0 0 10px;font-size:15px;font-weight:700">Create New Nurse Station</h4>
+      <div style="display:grid;gap:10px;margin-bottom:12px">
+        <div>
+          <label for="inNurseNameNew" style="display:block;font-size:12.5px;font-weight:700;color:var(--text-soft);margin-bottom:4px">Nurse Name</label>
+          <input id="inNurseNameNew" class="alph-out" style="min-height:auto;padding:10px 14px;font-size:15px;width:100%" placeholder="e.g. Sarah Jenkins, RN">
+        </div>
+        <div>
+          <label for="inNurseUnitNew" style="display:block;font-size:12.5px;font-weight:700;color:var(--text-soft);margin-bottom:4px">Station / Unit (Optional)</label>
+          <input id="inNurseUnitNew" class="alph-out" style="min-height:auto;padding:10px 14px;font-size:15px;width:100%" placeholder="e.g. ICU Pod A">
+        </div>
+      </div>
+      <button class="btn btn-mint" id="btnCreateNurseProfile" style="width:100%">Create Station Profile</button>
+    </div>
+    <div class="dlg-actions" style="margin-top:14px">
+      <button class="btn btn-ghost" id="btnCloseNurseDlg" type="button">Close</button>
+    </div>
+  </dialog>
 
   <div id="alarm" class="alarm-ov hidden" style="display:none"></div>
 </div>
