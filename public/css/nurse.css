@@ -380,6 +380,18 @@
   background: var(--accent-soft);
 }
 
+/* Browse patient rows in connect dialog */
+.browse-patient-row:hover {
+  border-color: var(--accent) !important;
+  background: var(--surface) !important;
+  transform: translateY(-1px);
+}
+.browse-patient-row:has(input:checked) {
+  border-color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  box-shadow: var(--clay-sm);
+}
+
 /* Print board (kept from board.html design, used when printing from dashboard) */
 @media print {
   body { background: #fff; }

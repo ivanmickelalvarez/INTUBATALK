@@ -510,32 +510,89 @@ function openConnectDialog() {
   if (!dlg) return;
   const inRoom = $("#inNewRoom", dlg);
   const statusEl = $("#connectRoomStatus", dlg);
+  const browseBtn = $("#btnBrowsePatients", dlg);
+  const browseList = $("#browsePatientsList", dlg);
   inRoom.value = "";
   statusEl.textContent = "";
+  browseList.style.display = "none";
+  browseList.innerHTML = "";
 
+  // Live validation for comma-separated codes
   const checkLive = async () => {
-    const val = inRoom.value.trim();
-    if (/^\d{4}$/.test(val)) {
-      statusEl.textContent = "Checking code...";
+    const raw = inRoom.value.trim();
+    const codes = raw.split(/[\s,]+/).map((c) => c.trim()).filter((c) => /^\d{4}$/.test(c));
+    const unique = Array.from(new Set(codes));
+
+    if (!unique.length) { statusEl.textContent = ""; return; }
+
+    const results = [];
+    for (const code of unique) {
+      if (rooms.includes(code)) {
+        results.push(`⚠ ${code} already connected`);
+        continue;
+      }
       try {
-        const res = await fetch(`/api/room?code=${val}`);
+        const res = await fetch(`/api/room?code=${code}`);
         if (res.ok) {
           const d = await res.json();
           if (d.exists) {
-            statusEl.innerHTML = `✓ Found <b>${esc(d.name || "Patient")}</b> (Bed ${esc(d.bed || "·")})`;
-            statusEl.style.color = "var(--ok)";
-            return;
+            results.push(`✓ ${code} → <b>${esc(d.name || "Patient")}</b> (Bed ${esc(d.bed || "·")})`);
+          } else {
+            results.push(`○ ${code} will connect when patient goes online`);
           }
         }
-      } catch { /* demo/offline */ }
-      statusEl.textContent = `Room ${val} will connect when online.`;
-      statusEl.style.color = "var(--text-soft)";
-    } else {
-      statusEl.textContent = "";
+      } catch {
+        results.push(`○ ${code} (offline — will connect later)`);
+      }
+    }
+    statusEl.innerHTML = results.join("<br>");
+    statusEl.style.color = "var(--text-soft)";
+  };
+
+  let debounceTimer = null;
+  inRoom.oninput = () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(checkLive, 400);
+  };
+
+  // Browse online patients
+  browseBtn.onclick = async () => {
+    browseList.style.display = "block";
+    browseList.innerHTML = `<div style="text-align:center;color:var(--text-soft);font-size:13px;padding:12px">Loading patients…</div>`;
+    try {
+      const res = await fetch("/api/rooms");
+      if (!res.ok) throw new Error("failed");
+      const data = await res.json();
+      const available = (data.rooms || []).filter((r) => !rooms.includes(r.room));
+      if (!available.length) {
+        browseList.innerHTML = `<div style="text-align:center;color:var(--text-soft);font-size:13px;padding:12px">No unconnected patients found. Have a patient open their bedside tablet first.</div>`;
+        return;
+      }
+      browseList.innerHTML = available.map((r) => `
+        <label class="browse-patient-row" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;cursor:pointer;border:1px solid var(--line);background:var(--surface-2);margin-bottom:6px;transition:all .12s ease">
+          <input type="checkbox" class="browse-cb" data-room="${esc(r.room)}" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13.5px">${esc(r.name || "Patient")} ${r.bed ? `· <span style="color:var(--text-soft)">Bed ${esc(r.bed)}</span>` : ""}</div>
+            <div style="font-size:12px;color:var(--text-faint)">Room ${esc(r.room)} · ${r.online ? '<span style="color:var(--ok)">● Online</span>' : '<span style="color:var(--text-faint)">○ Offline</span>'}</div>
+          </div>
+        </label>
+      `).join("");
+
+      // Sync checked items into input field
+      $$(".browse-cb", browseList).forEach((cb) => {
+        cb.addEventListener("change", () => {
+          const checked = $$(".browse-cb:checked", browseList).map((c) => c.dataset.room);
+          const existing = inRoom.value.trim().split(/[\s,]+/).filter((c) => /^\d{4}$/.test(c) && !checked.includes(c));
+          const merged = Array.from(new Set([...existing, ...checked]));
+          inRoom.value = merged.join(", ");
+          checkLive();
+        });
+      });
+    } catch {
+      browseList.innerHTML = `<div style="text-align:center;color:var(--text-soft);font-size:13px;padding:12px">Could not fetch patients. Server may be offline.</div>`;
     }
   };
 
-  inRoom.oninput = checkLive;
   dlg.showModal();
   inRoom.focus();
 }
@@ -543,41 +600,51 @@ function openConnectDialog() {
 async function doConnectBed() {
   const dlg = $("#dlgConnectBed");
   const inRoom = $("#inNewRoom", dlg);
-  const codeVal = inRoom.value.trim();
+  const raw = inRoom.value.trim();
+  const codes = Array.from(new Set(
+    raw.split(/[\s,]+/).map((c) => c.trim()).filter((c) => /^\d{4}$/.test(c))
+  ));
 
-  if (!/^\d{4}$/.test(codeVal)) {
-    toastToast("Please enter a valid 4-digit code.");
+  if (!codes.length) {
+    toastToast("Please enter at least one valid 4-digit room code.");
     return;
   }
 
-  if (rooms.includes(codeVal)) {
-    toastToast(`Bed ${codeVal} is already connected to this station.`);
+  const newCodes = codes.filter((c) => !rooms.includes(c));
+  if (!newCodes.length) {
+    toastToast("All entered rooms are already connected.");
     dlg.close();
     return;
   }
 
-  rooms.push(codeVal);
+  // Add all new rooms at once
+  for (const code of newCodes) {
+    rooms.push(code);
+    sync.addRoom(code);
+  }
+
   if (currentNurse) {
     currentNurse.rooms = rooms;
     persistActiveNurse();
   }
-  sync.addRoom(codeVal);
   dlg.close();
 
-  // Try fetching patient info immediately
-  try {
-    const res = await fetch(`/api/room?code=${codeVal}`);
-    if (res.ok) {
-      const d = await res.json();
-      if (d.exists) {
-        patients[codeVal] = { room: codeVal, name: d.name, bed: d.bed, online: d.online };
+  // Fetch patient info for all new rooms
+  for (const code of newCodes) {
+    try {
+      const res = await fetch(`/api/room?code=${code}`);
+      if (res.ok) {
+        const d = await res.json();
+        if (d.exists) {
+          patients[code] = { room: code, name: d.name, bed: d.bed, online: d.online };
+        }
       }
-    }
-  } catch { /* noop */ }
+    } catch { /* noop */ }
+  }
 
   updateTopBar();
   renderDashboard();
-  toastToast(`Bed ${codeVal} connected to your dashboard.`);
+  toastToast(`${newCodes.length} patient bed${newCodes.length > 1 ? "s" : ""} connected: ${newCodes.join(", ")}`);
 }
 
 function disconnectBed(codeVal) {

@@ -77,6 +77,8 @@ async function api(request, env, url) {
     if (p === "/api/profile" && request.method === "POST") return await profile(request, env);
     if (p === "/api/presence" && request.method === "POST") return await presence(request, env);
     if (p === "/api/room" && request.method === "GET") return await roomInfo(url, env);
+    if (p === "/api/rooms" && request.method === "GET") return await listRooms(env);
+    if (p === "/api/patients/batch" && request.method === "POST") return await batchPatients(request, env);
     if (p === "/api/poll" && request.method === "GET") return await poll(env, url);
   } catch (err) {
     return E(String(err?.message ?? err), 500);
@@ -102,6 +104,36 @@ async function roomInfo(url, env) {
     bed: row.bed,
     online: (Date.now() - (row.last_seen_ms || 0)) < 15000,
   });
+}
+
+async function listRooms(env) {
+  const { results } = await env.DB.prepare("SELECT room, name, bed, last_seen_ms FROM rooms ORDER BY last_seen_ms DESC LIMIT 50").all();
+  const rooms = (results || []).map((r) => ({
+    room: r.room,
+    name: r.name || "Patient",
+    bed: r.bed || "",
+    online: (Date.now() - (r.last_seen_ms || 0)) < 15000,
+    last_seen_ms: r.last_seen_ms || 0,
+  }));
+  return J({ ok: true, rooms });
+}
+
+async function batchPatients(request, env) {
+  const b = await readBody(request);
+  const list = Array.isArray(b.patients) ? b.patients : [];
+  const results = [];
+  for (const item of list) {
+    const name = String(item.name ?? "").trim().slice(0, 40) || "Patient";
+    const bed = String(item.bed ?? "").trim().slice(0, 12);
+    let room = String(item.room ?? "").trim();
+    if (!ROOM_RE.test(room)) room = roomCode();
+    await env.DB.prepare(
+      "INSERT INTO rooms (room, name, bed, created_ms, last_seen_ms) VALUES (?,?,?,?,?) " +
+      "ON CONFLICT(room) DO UPDATE SET name=excluded.name, bed=excluded.bed, last_seen_ms=excluded.last_seen_ms"
+    ).bind(room, name, bed, Date.now(), Date.now()).run();
+    results.push({ room, name, bed });
+  }
+  return J({ ok: true, patients: results });
 }
 
 async function session(request, env) {

@@ -249,6 +249,51 @@ async function handleApi(req, res, pathname) {
     });
   }
 
+  // GET /api/rooms (list all known / active rooms)
+  if (pathname === "/api/rooms" && req.method === "GET") {
+    const list = Object.values(store.rooms).map((r) => ({
+      room: r.room,
+      name: r.name || "Patient",
+      bed: r.bed || "",
+      online: Date.now() - (r.last_seen_ms || 0) < 15000,
+      last_seen_ms: r.last_seen_ms || 0,
+    }));
+    return sendJSON(res, { ok: true, rooms: list });
+  }
+
+  // POST /api/patients/batch (register or update multiple patients at once)
+  if (pathname === "/api/patients/batch" && req.method === "POST") {
+    const b = await parseBody(req);
+    const list = Array.isArray(b.patients) ? b.patients : [];
+    const results = [];
+    for (const item of list) {
+      const name = String(item.name ?? "").trim().slice(0, 40) || "Patient";
+      const bed = String(item.bed ?? "").trim().slice(0, 12);
+      let room = String(item.room ?? "").trim();
+      if (!ROOM_RE.test(room)) {
+        for (let i = 0; i < 20; i++) {
+          room = generateRoom();
+          if (!store.rooms[room]) break;
+        }
+      }
+      if (!store.rooms[room]) {
+        store.rooms[room] = {
+          room, name, bed,
+          created_ms: Date.now(),
+          last_seen_ms: Date.now(),
+          caps: [],
+        };
+      } else {
+        store.rooms[room].name = name;
+        store.rooms[room].bed = bed;
+        store.rooms[room].last_seen_ms = Date.now();
+      }
+      results.push({ room, name, bed });
+    }
+    saveStore();
+    return sendJSON(res, { ok: true, patients: results });
+  }
+
   // GET /api/poll (supports single room or multiple comma-separated rooms)
   if (pathname === "/api/poll" && req.method === "GET") {
     const rawRooms = query.rooms || query.room || "";
