@@ -1,0 +1,24 @@
+{
+  "name": "intubatalk",
+  "version": "1.0.0",
+  "description": "Adaptive communication system for intubated ICU patients — patient tablet, nurse dashboard, printable backup board.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "dev:wrangler": "wrangler dev --port 8788 --local",
+    "build": "echo Built for Vercel",
+    "check": "esbuild public/js/patient.js public/js/nurse.js public/js/needs.js public/js/lib/sync.js public/js/lib/util.js public/js/lib/audio.js public/js/lib/tts.js public/js/lib/icons.js public/js/lib/ambient.js worker.js --outdir=tmp-check && echo SYNTAX_OK",
+    "clean": "node -e \"require('fs').rmSync('tmp-check',{recursive:true,force:true})\""
+  },
+  "keywords": [
+    "icu",
+    "communication",
+    "aac",
+    "healthcare",
+    "prototype"
+  ],
+  "type": "commonjs",
+  "dependencies": {
+    "wrangler": "^4.149.0"
+  }
+}
