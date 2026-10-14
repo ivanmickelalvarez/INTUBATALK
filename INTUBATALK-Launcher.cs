@@ -87,6 +87,9 @@ namespace IntubaTalk
             _ctaBtn.Dock = DockStyle.Bottom;
             _ctaBtn.Click += delegate { if (OnSelect != null) OnSelect(); };
             this.Controls.Add(_ctaBtn);
+
+            this.Cursor = Cursors.Hand;
+            this.Click += delegate { if (OnSelect != null) OnSelect(); };
         }
 
         public void BindData()
@@ -608,6 +611,47 @@ namespace IntubaTalk
             this.BackColor = colBg;
             this.Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+
+            this.Shown += delegate
+            {
+                this.BringToFront();
+                this.Activate();
+            };
+
+            this.KeyPreview = true;
+            this.KeyDown += delegate(object s, KeyEventArgs ke)
+            {
+                if (ke.KeyCode == Keys.D1 || ke.KeyCode == Keys.P || ke.KeyCode == Keys.NumPad1)
+                {
+                    LaunchApp("/?fresh=1");
+                    ke.Handled = true;
+                }
+                else if (ke.KeyCode == Keys.D2 || ke.KeyCode == Keys.N || ke.KeyCode == Keys.NumPad2)
+                {
+                    LaunchApp("/nurse?fresh=1");
+                    ke.Handled = true;
+                }
+                else if (ke.KeyCode == Keys.D3 || ke.KeyCode == Keys.D || ke.KeyCode == Keys.NumPad3)
+                {
+                    LaunchApp("/dual");
+                    ke.Handled = true;
+                }
+                else if (ke.KeyCode == Keys.D4 || ke.KeyCode == Keys.B || ke.KeyCode == Keys.NumPad4)
+                {
+                    LaunchApp("/board");
+                    ke.Handled = true;
+                }
+                else if (ke.KeyCode == Keys.W)
+                {
+                    LaunchApp("/choose");
+                    ke.Handled = true;
+                }
+                else if (ke.KeyCode == Keys.F1 || ke.KeyCode == Keys.H)
+                {
+                    ShowHelp();
+                    ke.Handled = true;
+                }
+            };
 
             // Ambient background glow painting
             this.Paint += delegate(object s, PaintEventArgs pe)

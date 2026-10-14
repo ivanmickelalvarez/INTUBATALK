@@ -45,6 +45,7 @@
     <!-- Primary action buttons -->
     <button class="btn btn-mint btn-sm" id="btnAddPatient"><span data-ic="plus"></span>Add Patient</button>
     <button class="btn btn-ghost btn-sm" id="btnSwitchNurse"><span data-ic="repeat"></span>Switch Nurse</button>
+    <button class="btn btn-ghost btn-sm" id="btnNurseLogout" title="Log out from active nurse station"><span data-ic="logout"></span>Log out</button>
     <button class="btn btn-ghost btn-sm" id="btnTestSound"><span data-ic="speaker"></span>Test</button>
     <button class="btn btn-ghost btn-sm" id="btnMute"><span data-ic="mute"></span>Sound</button>
     <button class="btn btn-ghost btn-sm" id="btnNotify"><span data-ic="bell"></span>Alerts</button>
@@ -151,11 +152,5 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 <script type="module" src="/js/nurse.js"></script>
-
-  <!-- Initialize ambient background -->
-  <script type="module">
-    import { startAmbient } from "/js/lib/ambient.js";
-    startAmbient();
-  </script>
 </body>
 </html>

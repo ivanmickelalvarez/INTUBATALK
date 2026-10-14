@@ -114,7 +114,10 @@ function logoutNurse(nurseId) {
   feed = [];
   patients = {};
   persistPatients();
+  sync.attachRooms([]);
+  updateTopBar();
   renderJoin();
+  toastToast("Logged out from nurse station.");
 }
 
 function selectNurse(nurseId) {
@@ -171,8 +174,7 @@ function createNurseStation(name, unit = "", initialRooms = []) {
 function renderJoin() {
   document.title = titleBase;
   hidePatientStatusRail();
-  $("#codeTag").innerHTML = "Setup";
-  $("#nurseProfileChip").classList.add("hidden");
+  updateTopBar();
 
   // Prefill from the role chooser card, if the nurse just typed their name there.
   let joinName = "", joinUnit = "";
@@ -268,13 +270,21 @@ function renderJoin() {
 
 function updateTopBar() {
   if (!currentNurse) {
-    $("#nurseProfileChip").classList.add("hidden");
-    $("#codeTag").textContent = "0 Beds";
+    $("#nurseProfileChip")?.classList.add("hidden");
+    const codeTag = $("#codeTag");
+    if (codeTag) codeTag.textContent = "Setup";
+    $("#btnAddPatient")?.classList.add("hidden");
+    $("#btnSwitchNurse")?.classList.add("hidden");
+    $("#btnNurseLogout")?.classList.add("hidden");
     return;
   }
 
+  $("#nurseProfileChip")?.classList.remove("hidden");
+  $("#btnAddPatient")?.classList.remove("hidden");
+  $("#btnSwitchNurse")?.classList.remove("hidden");
+  $("#btnNurseLogout")?.classList.remove("hidden");
   const chip = $("#nurseProfileChip");
-  chip.classList.remove("hidden");
+  if (!chip) return;
   chip.innerHTML = `
     <div class="nurse-avatar" aria-hidden="true">👩‍⚕️</div>
     <div class="nurse-info">
@@ -789,7 +799,7 @@ async function doConnectBed() {
   renderPatientStatusRail();
   persistPatients();
   toastToast(`${newCodes.length} patient${newCodes.length > 1 ? "s" : ""} added to ${currentNurse?.name || "dashboard"}: ${newCodes.join(", ")}`);
-
+}
 
 function disconnectBed(codeVal) {
   const p = patients[codeVal];
@@ -827,6 +837,7 @@ function openNurseProfileDialog() {
       <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
         <button class="btn btn-sm btn-ghost logout-nurse" data-nid="${esc(n.id)}" style="flex:1">Log out</button>
         ${n.id === currentNurse?.id ? `<span class="badge ok" style="font-size:11px">Active</span>` : `<button class="btn btn-sm btn-ghost btn-switch-to" data-nid="${esc(n.id)}">Select</button>`}
+        <button class="btn btn-sm btn-ghost btn-remove-nurse" data-nid="${esc(n.id)}" title="Delete station profile" style="padding:4px 8px">✕</button>
       </div>
     </div>
   `).join("");
@@ -839,10 +850,19 @@ function openNurseProfileDialog() {
   });
   $$(".logout-nurse", listEl).forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (confirm(`Log out ${esc(n.name)} from the dashboard?`)) {
-        logoutNurse(btn.dataset.nid);
+      const nid = btn.dataset.nid;
+      const target = nurses.find((n) => n.id === nid);
+      const name = target ? target.name : "this nurse";
+      if (confirm(`Log out ${name} from the dashboard?`)) {
+        logoutNurse(nid);
         dlg.close();
       }
+    });
+  });
+  $$(".btn-remove-nurse", listEl).forEach((btn) => {
+    btn.addEventListener("click", () => {
+      removeNurse(btn.dataset.nid);
+      openNurseProfileDialog();
     });
   });
 
@@ -1239,6 +1259,12 @@ $("#btnCreateNurseProfile")?.addEventListener("click", () => {
 // Persistent top-bar buttons (these live outside #main, so wire once)
 $("#btnAddPatient")?.addEventListener("click", openConnectDialog);
 $("#btnSwitchNurse")?.addEventListener("click", openNurseProfileDialog);
+$("#btnNurseLogout")?.addEventListener("click", () => {
+  if (!currentNurse) return;
+  if (confirm(`Log out ${currentNurse.name} from the nurse dashboard?`)) {
+    logoutNurse(currentNurse.id);
+  }
+});
 $("#btnMute")?.addEventListener("click", () => {
   mute = !mute;
   saveJSON(LS_MUTE, mute);

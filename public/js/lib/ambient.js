@@ -40,7 +40,7 @@ function startAmbient() {
   const planeContainer = document.createElement("div");
   planeContainer.className = "ambient-plane-container";
   planeContainer.style.cssText = `
-    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    position: fixed; inset: 0; z-index: -3; pointer-events: none;
     transform-style: preserve-3d; overflow: hidden;
   `;
   document.body.prepend(planeContainer);
@@ -211,21 +211,17 @@ function startAmbient() {
     }
   };
 
-  let lastRAF = 0;
   const loop = (now) => {
     draw(now);
-    lastRAF = requestAnimationFrame(loop);
+    rAF = requestAnimationFrame(loop);
   };
 
-  // Use requestAnimationFrame for smooth animation, with setInterval fallback
   const startLoop = () => {
-    if (rAF || loopTimer) return;
+    if (rAF) return;
     rAF = requestAnimationFrame(loop);
-    loopTimer = setInterval(() => { /* fallback */ }, 40);
   };
   const stopLoop = () => {
-    if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
-    if (rAF) { cancelAnimationFrame(rAF); rAF = 0; }
+    if (rAF) { cancelAnimationFrame(rAF); rAF = null; }
   };
 
   startLoop();

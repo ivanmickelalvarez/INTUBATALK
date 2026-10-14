@@ -30,6 +30,7 @@ export const ICONS = {
   voice: `<path d="M12 3c-2 3-4 4.5-4 8a4 4 0 0 0 8 0c0-3.5-2-5-4-8z"/><rect x="6" y="17" width="12" height="4" rx="2"/><path d="M9 19h.01M12 19h.01M15 19h.01"/>`,
   plus: `<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>`,
   arrowLeft: `<path d="M19 12H5M12 19l-7-7 7-7"/>`,
+  logout: `<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>`,
 };
 
 // Static SVG builder

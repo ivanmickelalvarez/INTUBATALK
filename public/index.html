@@ -84,11 +84,6 @@
 if ("serviceWorker" in navigator) {
   addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
 }
-
-// Initialize ambient 3D background
-<script type="module">
-  import { startAmbient } from "/js/lib/ambient.js";
-  startAmbient();
 </script>
 <script type="module" src="/js/patient.js"></script>
 </body>
