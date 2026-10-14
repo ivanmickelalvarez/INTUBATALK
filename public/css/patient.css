@@ -295,10 +295,44 @@
   margin-top: 8px;
 }
 .blink-lesson { font-family: var(--font-display); font-size: clamp(17px, 3vw, 24px); font-weight: 600; margin-bottom: 14px; line-height: 1.4; }
+
+/* Camera assist (eye-blink mode) */
+.blink-cam-stage {
+  padding: 22px; border-radius: var(--radius-xl); background: var(--surface);
+  border: 1px solid rgba(255,255,255,.65); box-shadow: var(--clay-shadow);
+  margin-top: 16px;
+}
+.blink-cam-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.blink-cam-head h3 {
+  margin: 0; font-family: var(--font-display); font-size: clamp(18px, 3vw, 23px); font-weight: 600;
+  display: flex; align-items: center; gap: 10px;
+}
+.blink-cam-head h3 .ic { width: 22px; height: 22px; color: var(--accent-deep); }
+.blink-cam-note { color: var(--text-soft); font-size: 13.5px; line-height: 1.55; margin: 8px 0 12px; }
+.blink-cam-frame {
+  position: relative; border-radius: var(--radius-lg); overflow: hidden;
+  background: #10181d; box-shadow: var(--clay-pressed), 0 0 0 4px rgba(63,167,150,.12);
+  aspect-ratio: 4 / 3; max-width: 520px;
+}
+.blink-cam-frame video {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transform: scaleX(-1); /* mirrored, like a mirror — patients orient instantly */
+}
+.blink-cam-live {
+  position: absolute; top: 10px; left: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(13, 20, 25, .55); color: #fff;
+  font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  padding: 5px 10px; border-radius: 999px;
+  backdrop-filter: blur(4px);
+}
+.blink-cam-live .dot { width: 8px; height: 8px; }
+.blink-cam-off { position: absolute; bottom: 10px; right: 10px; }
 .blink-help { color: var(--text-soft); margin: 10px 2px 0; font-size: 14px; line-height: 1.5; }
 .blink-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
 @media (max-width: 480px) {
   .blink-actions .btn { flex: 1 1 100%; width: 100%; }
+  .blink-cam-frame { max-width: 100%; }
 }
 .blink-ref { font-size: 13px; color: var(--text-faint); margin-top: 14px; line-height: 1.5; }
 

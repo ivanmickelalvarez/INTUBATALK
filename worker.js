@@ -5,15 +5,22 @@
 // Endpoints:
 //   POST /api/session  {name, bed, room?} -> {room}
 //   POST /api/request  {room, kind, need, label, icon, msg, patient, bed, risk}
-//   POST /api/ack      {room, id, patientName}
-//   POST /api/clear    {room, patientName}
-//   POST /api/presence {room, patient, bed}
-//   GET  /api/poll?since=... -> {messages, rooms}
+//   POST /api/ack      {room, id, patientName}// POST /api/ack {room, id, patientName}
+// POST /api/clear {room, patientName}
+// POST /api/presence {room, patient, bed}
+// GET  /api/poll?since=... -> {messages, rooms}
+// Also supports multi-robot batch creation: POST /api/patients/batch.
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname.startsWith("/api/")) return api(request, env, url);
-    return env.ASSETS.fetch(request);
+    // Camera: the patient tablet's eye-blink camera assist needs same-origin
+    // camera access. Other than that, no sensitive permissions are requested.
+    const assets = await env.ASSETS.fetch(request);
+    const headers = new Headers(assets.headers);
+    headers.set("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
+    if (assets.status === 404) headers.set("X-Robots-Tag", "noindex");
+    return new Response(assets.body, { status: assets.status, headers });
   },
 };
 
@@ -79,6 +86,7 @@ async function api(request, env, url) {
     if (p === "/api/room" && request.method === "GET") return await roomInfo(url, env);
     if (p === "/api/rooms" && request.method === "GET") return await listRooms(env);
     if (p === "/api/patients/batch" && request.method === "POST") return await batchPatients(request, env);
+    // No matching API route -> 404 JSON for API paths
     if (p === "/api/poll" && request.method === "GET") return await poll(env, url);
   } catch (err) {
     return E(String(err?.message ?? err), 500);

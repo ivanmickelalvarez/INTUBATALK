@@ -5,6 +5,8 @@ import { speak, stopSpeech } from "./lib/tts.js";
 import * as sync from "./lib/sync.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
+import { startTilt } from "./lib/tilt3d.js";
+import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS, CAPS, CAPS_BY_KEY, DEFAULT_PROFILE } from "./needs.js";
 
 // ------------------------------------------------------------------ state
@@ -32,7 +34,7 @@ async function startSession() {
   if (!name) return toast("Please enter the patient name first.", 2600);
   profile.name = name;
   profile.bed = bed;
-  profile.inSyncMode = profile.inSyncMode || true;
+  profile.caps = profile.caps || [];
   sync.saveProfile(profile);
   audio.unlock();
   try {
@@ -52,7 +54,7 @@ function doEmergency() {
   audio.unlock();
   audio.alarmStart();
   flashScreen();
-  vibrate([120, 80, 120, 80, 240]);      speak("I need help now.", { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+  vibrate([120, 80, 120, 80, 240]);      speak("I need help now.", { rate: rate() });
   pendingEmg = sync.sendEmergency({ msg: "I need help now." });
   document.body.classList.add("emg-active");
   showEmgBanner();
@@ -122,6 +124,7 @@ function flashScreen() {
 }
 
 const needDef = (key) => NEEDS[key] || null;
+const rate = () => (profile.slowTts ? 0.75 : 1);
 
 // ------------------------------------------------------------------ app mount
 
@@ -160,7 +163,6 @@ function wireIncoming() {
     hideEmgBanner();
   });
   document.addEventListener("visibilitychange", () => { if (document.hidden) stopSpeech(); });
-  setInterval(() => { if (talkActive()) return; }, 3000);
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       goHome();
@@ -211,7 +213,7 @@ function wireTopButtons() {
 function customKeys() {
   let arr = [];
   try { arr = JSON.parse(localStorage.getItem("it_custom") || "[]"); } catch { arr = []; }
-  return arr.slice(0, 3).map((c) => `${c}`);
+  return arr.slice(0, 3).map((c) => String(c));
 }
 
 function saveCustom(list) {
@@ -323,7 +325,7 @@ function tileTap(key) {
     const label = key.slice(7);
     sync.sendNeed({ need: "custom", label, msg: `I need help with: ${label}.`, risk: "normal" });
     audio.chime(); vibrate(35);
-    speak(`I need help with: ${label}.`, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+    speak(`I need help with: ${label}.`, { rate: rate() });
     toast("Sent to the nurse.");
     return;
   }
@@ -332,7 +334,7 @@ function tileTap(key) {
   if (def.risk === "high") return openPanel(key);
   sync.sendNeed({ need: key, label: def.label, msg: def.msg, risk: "normal" });
   audio.chime(); vibrate(35);
-  speak(def.msg, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+  speak(def.msg, { rate: rate() });
   toast("Sent to the nurse.");
 }
 
@@ -346,9 +348,6 @@ function openPanel(kind) {
       <button class="btn btn-ghost back" id="pBack">${svg("arrowLeft")}Home</button>
       <h2>${svg(icon)}${esc(title)}</h2>
     </div>${note ? `<p class="blink-help">${esc(note)}</p>` : ""}`;
-  if (!$("#pBack")) {
-    // first paint of this panel: wire back button after HTML injection below
-  }
 
   if (kind === "pain") {
     panel.innerHTML = head("pain", "Pain level") + `
@@ -376,7 +375,7 @@ function openPanel(kind) {
       const sev = pickedPain >= 7 ? "high" : "normal";
       sync.sendNeed({ need: "pain", label: "Pain", msg: `My pain level is ${pickedPain} out of 10.`, risk: sev });
       audio.chime(); vibrate(35);
-      speak(`My pain level is ${pickedPain} out of 10.`, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+      speak(`My pain level is ${pickedPain} out of 10.`, { rate: rate() });
       toast("Pain report sent.");
       goHome();
     });
@@ -403,11 +402,11 @@ function openPanel(kind) {
     $("#vSend").addEventListener("click", () => {
       sync.sendNeed({ need: kind, label: def.label, msg: chosen, risk: "high" });
       audio.chime(); vibrate(35);
-      speak(chosen, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+      speak(chosen, { rate: rate() });
       toast("Sent to the nurse.");
       goHome();
     });
-    $("#vSpeak").addEventListener("click", () => speak(chosen, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) }));
+    $("#vSpeak").addEventListener("click", () => speak(chosen, { rate: rate() }));
     return wireBack();
   }
 
@@ -435,7 +434,7 @@ function openPanel(kind) {
       const t = ta.value.trim();
       if (!t) return toast("Write something first.");
       sync.sendNeed({ need: "message", label: "Message", msg: t });
-      speak(t, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+      speak(t, { rate: rate() });
       toast("Message sent.");
       goHome();
     });
@@ -469,7 +468,7 @@ function openPanel(kind) {
       const t = out.textContent.trim();
       if (!t) return toast("Spell something first.");
       sync.sendNeed({ need: "message", label: "Spelled", msg: t });
-      speak(t, { rate: (profile.inSyncMode ? 0.7 : profile.slowTts ? 0.85 : 1) });
+      speak(t, { rate: rate() });
       toast("Message sent.");
       goHome();
     }, 2);
@@ -489,13 +488,26 @@ function openPanel(kind) {
           <button class="btn btn-red" id="bLaunch">${svg("emergency")}Emergency</button>
         </div>
       </div>
-      <p class="blink-ref">Camera blink detection is deliberately off. The nurse assisted protocol is more reliable in ICU lighting and works today. Answers are logged with the buttons above.</p>`;
+      <div class="blink-cam-stage">
+        <div class="blink-cam-head">
+          <h3>${svg("camera")}Camera assist</h3>
+          <button class="btn btn-mint btn-sm" id="bCamOn">${svg("camera")}Enable camera</button>
+        </div>
+        <p class="blink-cam-note">The bedside camera lets the nurse watch the patient's eyes live on the tablet, so blinks can be counted even from a busy ward desk. The video stays on this device — it is never recorded or sent to the dashboards.</p>
+        <div class="blink-cam-frame hidden" id="bCamFrame">
+          <video id="bCamVideo" autoplay playsinline muted></video>
+          <span class="blink-cam-live"><span class="dot on"></span>LIVE</span>
+          <button class="btn btn-red btn-sm blink-cam-off" id="bCamOff">${svg("close")}Camera off</button>
+        </div>
+        <div class="gate-err hidden" id="bCamErr"></div>
+      </div>
+      <p class="blink-ref">Automatic blink detection is deliberately off: the assisted protocol is more reliable in ICU lighting and works today. Answers are logged with the buttons above.</p>`;
     let answer = null;
     const saySpoken = () => {
       const el = $("#bQ");
       const spoken = answer === "yes" ? "The patient says yes." : answer === "no" ? "The patient says no." : "Waiting for a blink. The nurse will ask the question.";
       el.textContent = spoken;
-      if (answer) speak(spoken, { rate: (profile.inSyncMode ? 0.75 : 1) });
+      if (answer) speak(spoken, { rate: rate() });
     };
     $("#bYes").addEventListener("click", () => {
       answer = "yes";
@@ -513,14 +525,61 @@ function openPanel(kind) {
     });
     $("#bClear").addEventListener("click", () => { answer = null; saySpoken(); });
     $("#bLaunch").addEventListener("click", doEmergency);
+    $("#bCamOn").addEventListener("click", () => openBlinkCamera());
+    $("#bCamOff").addEventListener("click", () => { stopBlinkCamera(); });
     return wireBack();
   }
+}
+
+// ------------------------------------------------------------------ camera (eye-blink assist)
+
+let blinkStream = null;
+
+async function openBlinkCamera() {
+  const frame = $("#bCamFrame");
+  const err = $("#bCamErr");
+  if (!frame) return;
+  err?.classList.add("hidden");
+  if (blinkStream) { frame.classList.remove("hidden"); return; }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    if (err) { err.textContent = "This browser does not support camera access. Use the assisted blink buttons instead."; err.classList.remove("hidden"); }
+    return;
+  }
+  try {
+    blinkStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
+      audio: false,
+    });
+    const video = $("#bCamVideo");
+    if (video) {
+      video.srcObject = blinkStream;
+      await video.play().catch(() => {});
+    }
+    frame.classList.remove("hidden");
+    audio.unlock();
+    toast("Camera is live. The nurse can watch from the bedside screen.");
+  } catch (e) {
+    if (err) {
+      err.textContent = e?.name === "NotAllowedError"
+        ? "Camera permission was denied. Allow camera access for this site, then tap Enable camera again."
+        : "No camera is available on this device. Use the assisted blink buttons instead.";
+      err.classList.remove("hidden");
+    }
+  }
+}
+
+function stopBlinkCamera() {
+  blinkStream?.getTracks().forEach((t) => t.stop());
+  blinkStream = null;
+  const frame = $("#bCamFrame");
+  if (frame) frame.classList.add("hidden");
 }
 
 const wireBack = () => $("#pBack")?.addEventListener("click", goHome);
 
 const goHome = () => {
   pickedPain = null;
+  stopBlinkCamera(); // release the camera when leaving the blink panel
   const panel = $("#panel");
   panel.classList.add("hidden");
   panel.innerHTML = "";
@@ -563,7 +622,7 @@ function openCaps() {
   $("#dSave", dlg).addEventListener("click", () => {
     profile.caps = [...sel];
     profile.slowTts = $("#slowTts").checked;
-    profile.inSyncMode = profile.inSyncMode || true;
+    profile.caps = profile.caps || [];
     sync.saveProfile(profile);
     dlg.close();
     renderTop();
@@ -628,6 +687,24 @@ if ($("#inName")) {
   setTimeout(() => { try { $("#inName").focus(); } catch { /* noop */ } }, 200);
 }
 if ($("#inBed")) $("#inBed").value = "";
-$("#btnCreate").addEventListener("click", startSession);
-$("#gateForm").addEventListener("submit", (e) => { e.preventDefault(); startSession(); });
+$("#btnCreate").addEventListener("click", () => {
+  withButtonLoading($("#btnCreate"), startSession(), "Starting…");
+});
+
+// Boot complete: drop the splash screen and settle content in.
+document.documentElement.classList.add("app-booting");
+removeSplash();
+document.querySelectorAll("#wizard, #app").forEach((el) => el.classList.add("app-fade"));
+requestAnimationFrame(() => document.documentElement.classList.remove("app-booting"));
+
+// Connection banner: react to poll success/failure while the tablet is live.
+sync.on("connection", (ok) => {
+  setConnectionState(ok ? "live" : "offline");
+});
+window.addEventListener("online", () => { /* next poll (≤1.5s) confirms and clears */ });
+window.addEventListener("offline", () => setConnectionState("offline"));
+$( "#gateForm" ).addEventListener("submit", (e) => {
+  e.preventDefault();
+  withButtonLoading($("#btnCreate"), startSession(), "Starting…");
+});
 $("#inName").addEventListener("keydown", (e) => { if (e.key === "Enter") startSession(); });

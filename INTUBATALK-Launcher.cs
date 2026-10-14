@@ -16,7 +16,14 @@ using System.Drawing.Text;
 using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
-using Microsoft.VisualBasic;
+
+using System.Reflection;
+
+[assembly: AssemblyTitle("INTUBATALK")]
+[assembly: AssemblyDescription("Adaptive communication system for intubated ICU patients. Desktop hub with patient tablet, nurse dashboard, dual simulator and printable backup board.")]
+[assembly: AssemblyProduct("INTUBATALK ICU System")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]
 
 namespace IntubaTalk
 {
@@ -594,7 +601,7 @@ namespace IntubaTalk
 
         private void InitUI()
         {
-            this.Text = "INTUBATALK · Choose Your Role";
+            this.Text = "INTUBATALK v2 · Choose Your Role";
             this.Size = new Size(960, 740);
             this.MinimumSize = new Size(880, 680);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -750,7 +757,7 @@ namespace IntubaTalk
                     "1-Tap needs: Breathing, Suction, Pain, Water",
                     "Visual 0 to 10 pain rating scale",
                     "Nurse-assisted eye-blink protocol",
-                    "Alphabet speller pad & emergency alert"
+                    "Alphabet speller & emergency alert"
                 },
                 ButtonText = "Select Patient Role",
                 AccentColor = colMint,
@@ -762,6 +769,9 @@ namespace IntubaTalk
             roleGrid.Controls.Add(cardPatient, 0, 0);
 
             // ── Card 2: Nurse ──
+            // The dashboard's own sign-in card collects the nurse's name (and
+            // ward), attaches it to every acknowledgement, and matches the web
+            // role chooser exactly — so no legacy InputBox prompt here.
             ClayRoleCard cardNurse = new ClayRoleCard
             {
                 Dock = DockStyle.Fill,
@@ -770,25 +780,18 @@ namespace IntubaTalk
                 BadgeBg = Color.FromArgb(217, 231, 239),
                 BadgeText = Color.FromArgb(32, 75, 102),
                 RoleTitle = "I Am the Nurse",
-                RoleSubtitle = "For bedside nurses, doctors, and ICU staff to monitor alerts and respond to requests.",
+                RoleSubtitle = "Sign in with your name so every request is answered in your name. Monitor several beds at once.",
                 BulletPoints = new string[] {
-                    "Individual nurse dashboard & station switcher",
+                    "Sign in with your name (shows on every ack)",
                     "Multi-patient bed monitor (simultaneous rooms)",
-                    "Instant acknowledge with nurse attribution",
+                    "Create & pair patients by 4-digit room code",
                     "Urgent repeating sirens & audible TTS speaker"
                 },
                 ButtonText = "Select Nurse Role",
                 AccentColor = colTeal,
                 AccentDark = colTealDk,
                 IsPatientIcon = false,
-                OnSelect = delegate {
-    string name = Microsoft.VisualBasic.Interaction.InputBox("Enter your name:", "Nurse Name", "");
-    if (!string.IsNullOrWhiteSpace(name)) {
-        LaunchApp("/nurse?fresh=1&name=" + System.Net.WebUtility.UrlEncode(name));
-    } else {
-        LaunchApp("/nurse?fresh=1");
-    }
-}
+                OnSelect = delegate { LaunchApp("/nurse?fresh=1"); }
             };
             cardNurse.BindData();
             roleGrid.Controls.Add(cardNurse, 1, 0);
@@ -845,9 +848,12 @@ namespace IntubaTalk
 
             ClayPillButton btnHelp = new ClayPillButton { Text = "❓ How It Works", Width = 125 };
             btnHelp.Click += delegate { ShowHelp(); };
+            ClayPillButton btnPrivacy = new ClayPillButton { Text = "🔒 Privacy", Width = 95 };
+            btnPrivacy.Click += delegate { LaunchApp("/privacy"); };
             ClayPillButton btnRestart = new ClayPillButton { Text = "🔄 Restart Server", Width = 125 };
             btnRestart.Click += delegate { RestartServer(); };
 
+            flowRight.Controls.Add(btnPrivacy);
             flowRight.Controls.Add(btnHelp);
             flowRight.Controls.Add(btnRestart);
 
@@ -866,6 +872,8 @@ namespace IntubaTalk
             trayMenu.Items.Add("🩺 Open Nurse Dashboard", null, delegate { LaunchApp("/nurse?fresh=1"); });
             trayMenu.Items.Add("👥 Open Dual Simulator", null, delegate { LaunchApp("/dual"); });
             trayMenu.Items.Add("📋 Open Printable Board", null, delegate { LaunchApp("/board"); });
+            trayMenu.Items.Add("🔒 Privacy & Data Handling", null, delegate { LaunchApp("/privacy"); });
+            trayMenu.Items.Add("📖 Usage Guidelines", null, delegate { LaunchApp("/guidelines"); });
             trayMenu.Items.Add("-");
             trayMenu.Items.Add("Open Role Chooser Hub", null, delegate { RestoreFromTray(); });
             trayMenu.Items.Add("Copy Bedside Wi-Fi URL", null, delegate { CopyLanUrl(); });
@@ -1053,11 +1061,14 @@ namespace IntubaTalk
                 "   Opens the Bedside Tablet. Every time this is opened, a new patient login\n" +
                 "   is required (Patient Name & Bed Number) to generate a fresh room code.\n\n" +
                 "2. Select Nurse Role:\n" +
-                "   Opens the Nurse Dashboard. Enter the patient's 4-digit code to pair instantly.\n\n" +
+                "   Opens the Nurse Dashboard. Sign in with your name, then enter the\n" +
+                "   patient's 4-digit code to pair instantly (or create patients there).\n\n" +
                 "3. Dual Simulator:\n" +
                 "   Presents both Patient and Nurse screens side-by-side on this display.\n\n" +
                 "4. Printable Board:\n" +
-                "   Generates a clean, laminatable communication chart as a paper backup.",
+                "   Generates a clean, laminatable communication chart as a paper backup.\n\n" +
+                "Privacy: nothing leaves this device except on your Wi-Fi; no data is\n" +
+                "ever recorded, tracked, or sold. See the Privacy button for details.",
                 "INTUBATALK Guide",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

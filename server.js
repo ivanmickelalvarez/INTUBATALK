@@ -7,7 +7,7 @@ const path = require("path");
 const url = require("url");
 const os = require("os");
 
-const PORT = parseInt(process.env.PORT || "8788", 10);
+const PORT = parseInt(process.env.PORT || "8788", 10) || 8788;
 const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_FILE = path.join(__dirname, ".intubatalk-store.json");
 
@@ -345,7 +345,10 @@ function serveStatic(req, res, pathname) {
   else if (cleanPath === "/choose") cleanPath = "/choose.html";
   else if (cleanPath === "/nurse") cleanPath = "/nurse.html";
   else if (cleanPath === "/board") cleanPath = "/board.html";
+  else if (cleanPath === "/favicon.ico") cleanPath = "/icons/icon.svg";
   else if (cleanPath === "/dual") cleanPath = "/dual.html";
+  else if (cleanPath === "/privacy") cleanPath = "/privacy.html";
+  else if (cleanPath === "/guidelines") cleanPath = "/guidelines.html";
   else if (cleanPath === "/console") {
     const consoleFile = path.join(__dirname, "INTUBATALK-Test-Console.html");
     if (fs.existsSync(consoleFile)) {
@@ -360,23 +363,43 @@ function serveStatic(req, res, pathname) {
     res.writeHead(403); return res.end("Forbidden");
   }
 
+  const notFound = (res) => {
+    const nfPath = path.join(PUBLIC_DIR, "404.html");
+    if (fs.existsSync(nfPath)) {
+      res.writeHead(404, {
+        "Content-Type": "text/html; charset=utf-8",
+        "X-Robots-Tag": "noindex",
+        ...CORS_HEADERS,
+      });
+      fs.createReadStream(nfPath).pipe(res);
+    } else {
+      res.writeHead(404, { "Content-Type": "text/plain" });
+      res.end("File Not Found");
+    }
+  };
+
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     // Try appending .html
     if (fs.existsSync(filePath + ".html")) {
       filePath = filePath + ".html";
     } else {
-      res.writeHead(404, { "Content-Type": "text/plain" });
-      return res.end("File Not Found");
+      return notFound(res);
     }
   }
 
   const ext = path.extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
+  // Code assets (html/js/css/manifest/worker/sitemap) must always revalidate, or
+  // clients pin old builds for up to an hour after an update ships (e.g. a nurse
+  // still sees last month's sign-in flow). Only static artwork (png/webp) caches long.
+  const isImmutableArt = ext === ".png" || ext === ".webp";
   res.writeHead(200, {
     "Content-Type": contentType,
     ...CORS_HEADERS,
-    "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=3600",
+    // Camera is needed by the patient's eye-blink camera assist (same-origin only).
+    "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
+    "Cache-Control": isImmutableArt ? "public, max-age=31536000, immutable" : "no-cache",
   });
   fs.createReadStream(filePath).pipe(res);
 }

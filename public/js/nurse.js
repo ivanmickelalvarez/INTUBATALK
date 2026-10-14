@@ -2,10 +2,11 @@
 // Multi-Nurse & Multi-Patient monitoring system with clinical Claymorphism UI.
 import { $, $$, esc, fmtClock, fmtAgo, loadJSON, saveJSON } from "./lib/util.js";
 import * as audio from "./lib/audio.js";
-import { speak, stopSpeech, ttsAvailable, DEFAULT_VOICE_CHECK, talkActive } from "./lib/tts.js";
+import { speak, stopSpeech } from "./lib/tts.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
 import * as sync from "./lib/sync.js";
+import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS } from "./needs.js";
 
 const LS_NURSES = "it_nurses";
@@ -142,6 +143,18 @@ function renderJoin() {
   $("#codeTag").innerHTML = "Setup";
   $("#nurseProfileChip").classList.add("hidden");
 
+  // Prefill from the role chooser card, if the nurse just typed their name there.
+  let joinName = "", joinUnit = "";
+  try {
+    const raw = sessionStorage.getItem("it_nurse_join");
+    if (raw) {
+      const j = JSON.parse(raw);
+      joinName = String(j.name || "").slice(0, 40);
+      joinUnit = String(j.unit || "").slice(0, 40);
+      sessionStorage.removeItem("it_nurse_join");
+    }
+  } catch { /* malformed handoff: ignore */ }
+
   const existingNursesHtml = nurses.length > 0
     ? `
       <div style="margin-bottom:18px">
@@ -177,11 +190,11 @@ function renderJoin() {
       <form id="formNewNurse" style="display:grid;gap:14px" novalidate>
         <div>
           <label for="inNurseName" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Nurse Name (required)</label>
-          <input id="inNurseName" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40" autocomplete="name">
+          <input id="inNurseName" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40" autocomplete="name" value="${esc(joinName)}">
         </div>
         <div>
           <label for="inNurseUnit" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Ward / Pod (Optional)</label>
-          <input id="inNurseUnit" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. ICU Pod A" maxlength="40">
+          <input id="inNurseUnit" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. ICU Pod A" maxlength="40" value="${esc(joinUnit)}">
         </div>
         <div>
           <label for="inInitialRooms" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Bedside Room Code(s) <span style="font-weight:500">(Optional, comma-separated)</span></label>
@@ -201,6 +214,7 @@ function renderJoin() {
 
   $("#formNewNurse").addEventListener("submit", (e) => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector("button[type=submit], .btn-mint");
     const name = $("#inNurseName").value.trim();
     const unit = $("#inNurseUnit").value.trim();
     const rawRooms = $("#inInitialRooms").value.trim();
@@ -215,7 +229,7 @@ function renderJoin() {
       $("#inNurseName").focus();
       return;
     }
-    createNurseStation(name, unit, parsedRooms);
+    withButtonLoading(submitBtn, Promise.resolve(createNurseStation(name, unit, parsedRooms)), "Signing in…");
   });
 }
 
@@ -553,12 +567,14 @@ function openConnectDialog() {
   const statusEl = $("#connectRoomStatus", dlg);
   const browseBtn = $("#btnBrowsePatients", dlg);
   const browseList = $("#browsePatientsList", dlg);
-  const targetEl = $("#connectNurseTarget", dlg);
-  if (targetEl) targetEl.textContent = `Adding to ${currentNurse.name}'s dashboard (${rooms.length} patient${rooms.length === 1 ? "" : "s"} connected).`;
+  const taNew = $("#taNewPatients", dlg);
+  const createResult = $("#createPatientResult", dlg);
   inRoom.value = "";
   statusEl.textContent = "";
   browseList.style.display = "none";
   browseList.innerHTML = "";
+  if (taNew) taNew.value = "";
+  if (createResult) createResult.innerHTML = "";
 
   // Live validation for comma-separated codes
   const checkLive = async () => {
@@ -648,13 +664,40 @@ async function doConnectBed() {
     raw.split(/[\s,]+/).map((c) => c.trim()).filter((c) => /^\d{4}$/.test(c))
   ));
 
-  if (!codes.length) {
-    toastToast("Please enter at least one valid 4-digit room code.");
+  // Optional: create brand new patients by name (one per line) via the batch API.
+  const taNew = $("#taNewPatients", dlg);
+  const createResult = $("#createPatientResult", dlg);
+  const newNames = taNew
+    ? taNew.value.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean).slice(0, 12)
+    : [];
+
+  let batchResults = [];
+  if (newNames.length) {
+    try {
+      const res = await fetch("/api/patients/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patients: newNames.map((name) => ({ name })) }),
+      });
+      if (!res.ok) throw new Error(`failed (${res.status})`);
+      const data = await res.json();
+      batchResults = data.patients || [];
+    } catch {
+      if (createResult) createResult.innerHTML = `<span style="color:var(--alert)">Could not create patients — the server may be offline. Try the room codes instead.</span>`;
+      return;
+    }
+  }
+
+  const batchCodes = batchResults.map((r) => r.room).filter((c) => /^\d{4}$/.test(c));
+  const connectCodes = Array.from(new Set([...codes, ...batchCodes]));
+
+  if (!connectCodes.length) {
+    toastToast("Enter at least one room code or one patient name.");
     return;
   }
 
-  const newCodes = codes.filter((c) => !rooms.includes(c));
-  if (!newCodes.length) {
+  const newCodes = connectCodes.filter((c) => !rooms.includes(c));
+  if (!newCodes.length && !newNames.length) {
     toastToast("All entered rooms are already connected.");
     dlg.close();
     return;
@@ -670,6 +713,22 @@ async function doConnectBed() {
     currentNurse.rooms = rooms;
     persistActiveNurse();
   }
+
+  // Show the generated codes so they can be copied to each tablet
+  if (createResult && batchResults.length) {
+    createResult.innerHTML = batchResults.map((r) =>
+      `✓ <b>${esc(r.name)}</b> → room code <b style="letter-spacing:2px">${esc(r.room)}</b>`).join("<br>");
+    // The dashboard behind the dialog should reflect the new patients immediately.
+    for (const r of batchResults) {
+      patients[r.room] = { room: r.room, name: r.name, bed: r.bed || "", online: false };
+    }
+    updateTopBar();
+    renderDashboard();
+    renderPatientStatusRail();
+    toastToast(`${batchResults.length} patient${batchResults.length > 1 ? "s" : ""} created. Room codes shown below — connect the tablets with them.`);
+    return; // keep the dialog open so the codes stay visible
+  }
+
   dlg.close();
 
   // Fetch patient info for all new rooms
@@ -685,9 +744,15 @@ async function doConnectBed() {
     } catch { /* noop */ }
   }
 
+  // Cache batch-created patients immediately
+  for (const r of batchResults) {
+    patients[r.room] = { room: r.room, name: r.name, bed: r.bed || "", online: false };
+  }
+
   updateTopBar();
   renderDashboard();
   toastToast(`${newCodes.length} patient${newCodes.length > 1 ? "s" : ""} added to ${currentNurse?.name || "dashboard"}: ${newCodes.join(", ")}`);
+  renderPatientStatusRail();
 }
 
 function disconnectBed(codeVal) {
@@ -1067,6 +1132,24 @@ document.addEventListener("click", () => audio.unlock(), { once: true });
 
 // URL param reset handling
 const urlParams = new URLSearchParams(window.location.search);
+
+// Role-chooser handoff: if the nurse typed a name on /choose, always honor it
+// by landing on the sign-in screen pre-filled — even if a profile was saved.
+let joinHandoff = null;
+try {
+  joinHandoff = JSON.parse(sessionStorage.getItem("it_nurse_join") || "null");
+} catch { joinHandoff = null; }
+if (joinHandoff?.name) {
+  activeNurseId = null;
+  currentNurse = null;
+  rooms = [];
+  feed = [];
+  // Clear the ?fresh=1 flag from the URL without a reload.
+  if (urlParams.has("fresh") || urlParams.has("reset")) {
+    history.replaceState(null, "", "/nurse");
+  }
+}
+
 if (urlParams.get("fresh") === "1" || urlParams.get("reset") === "1") {
   // If explicit fresh reset requested via role chooser:
   // keep nurse list, but open selector so user chooses which nurse to open
@@ -1086,7 +1169,9 @@ $("#btnNotify").addEventListener("click", async () => {
 
 // Modal Dialog Wiring
 $("#btnCloseConnectDlg")?.addEventListener("click", () => $("#dlgConnectBed")?.close());
-$("#btnConfirmConnect")?.addEventListener("click", doConnectBed);
+$("#btnConfirmConnect")?.addEventListener("click", () => {
+  withButtonLoading($("#btnConfirmConnect"), Promise.resolve(doConnectBed()), "Connecting…");
+});
 $("#inNewRoom")?.addEventListener("keydown", (e) => { if (e.key === "Enter") doConnectBed(); });
 
 $("#btnCloseNurseDlg")?.addEventListener("click", () => $("#dlgNurseProfile")?.close());
@@ -1099,8 +1184,8 @@ $("#btnCreateNurseProfile")?.addEventListener("click", () => {
     nameEl.focus();
     return;
   }
-  const created = createNurseStation(name, unit, []);
-  if (created) $("#dlgNurseProfile")?.close();
+  const created = withButtonLoading($("#btnCreateNurseProfile"), Promise.resolve(createNurseStation(name, unit, [])), "Creating…");
+  Promise.resolve(created).then((ok) => { if (ok) $("#dlgNurseProfile")?.close(); });
 });
 
 // Persistent top-bar buttons (these live outside #main, so wire once)
@@ -1135,3 +1220,14 @@ if (currentNurse) {
 } else {
   renderJoin();
 }
+
+// Boot complete: drop the splash screen and settle content in.
+document.documentElement.classList.add("app-booting");
+removeSplash();
+document.querySelectorAll(".n-app").forEach((el) => el.classList.add("app-fade"));
+requestAnimationFrame(() => document.documentElement.classList.remove("app-booting"));
+
+// Connection banner: react to poll success/failure while the dashboard is live.
+sync.on("connection", (ok) => setConnectionState(ok ? "live" : "offline"));
+window.addEventListener("offline", () => setConnectionState("offline"));
+window.addEventListener("online", () => { /* next poll (≤1.5s) confirms and clears */ });

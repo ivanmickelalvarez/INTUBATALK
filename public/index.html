@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3f1ec">
-<title>INTUBATALK · Patient</title>
+<meta name="description" content="INTUBATALK patient tablet: one-tap needs, pain scale, speller, eye-blink yes/no and emergency alerts for intubated ICU patients who cannot speak.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Patient Tablet</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon.svg">
@@ -16,12 +18,21 @@
 </head>
 <body>
 
+<!-- Splash: paints before JS, removed by lib/feedback.js once the app boots -->
+<div class="app-splash" id="splash" aria-hidden="true">
+  <div class="app-splash-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c-2 3-4 4.5-4 8a4 4 0 0 0 8 0c0-3.5-2-5-4-8z"/><rect x="6" y="17" width="12" height="4" rx="2"/><path d="M9 19h.01M12 19h.01M15 19h.01"/></svg>
+  </div>
+  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
+</div>
 <section id="wizard" class="hidden">
   <div class="gate">
     <nav class="role-nav" aria-label="Role selector" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;flex-wrap:wrap">
       <span class="badge mint" style="padding:6px 14px;font-size:13px;font-weight:700">👤 Patient Tablet</span>
       <a class="badge" href="/nurse" style="padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;color:var(--text-soft)">🩺 Switch to Nurse Dashboard →</a>
       <a class="badge" href="/dual" style="padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;color:var(--text-soft)">👥 Dual Simulator →</a>
+      <a class="badge" href="/choose" style="padding:6px 14px;font-size:13px;font-weight:700;text-decoration:none;color:var(--text-soft)">🏠 All roles →</a>
     </nav>
     <div class="gate-logo">
       <div class="brand-mark" id="gateMark" aria-hidden="true"></div>

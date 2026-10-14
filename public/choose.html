@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f3f1ec">
-<title>INTUBATALK · Choose Your Role</title>
+<meta name="description" content="Choose your role in INTUBATALK: a bedside tablet for intubated ICU patients to speak without a voice, or the multi-bed nurse dashboard. Blink yes/no, spell, call for help.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Choose Your Role — Patient Tablet or Nurse Dashboard</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -552,6 +554,54 @@
     text-shadow: 0 1px 0 rgba(255,255,255,.7);
   }
 
+  /* Nurse join form inside the card */
+  .nurse-join-form { display: grid; gap: 10px; margin-bottom: 8px; }
+  .join-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin: 0 2px 5px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.8);
+  }
+  .join-field label .req { color: var(--nurse-deep); }
+  .join-field label .opt {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--text-faint);
+  }
+  .join-field input {
+    width: 100%;
+    background: #e9e7e1;
+    border: 1.5px solid rgba(255, 255, 255, .85);
+    border-radius: 15px;
+    padding: 12px 16px;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--text);
+    box-shadow: var(--well-shadow);
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .join-field input:focus {
+    outline: none;
+    border-color: var(--nurse);
+    box-shadow: var(--well-shadow), 0 0 0 3px rgba(63, 127, 167, .18);
+  }
+  .join-field input::placeholder { color: var(--text-faint); font-weight: 500; }
+  .join-error {
+    color: #a63a3a;
+    background: linear-gradient(145deg, #fbe7e7, #f6d9d9);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 12px;
+    padding: 9px 13px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: var(--well-shadow);
+  }
+
   /* ---------- Footer as clay bar ---------- */
   .chooser-footer {
     display: flex;
@@ -643,10 +693,9 @@
     }
     .brand-badge { padding: 8px 18px 8px 8px; gap: 10px; }
     .brand-mark-lg { width: 40px; height: 40px; border-radius: 14px; }
-    .roles-grid { gap: 18px; margin-bottom: 20px; }
-    .role-card {
-      padding: 28px 18px 18px;
-      border-radius: 24px;
+    .roles-grid { gap: 18px; margin-bottom: 20px; }  .role-card {
+    padding: 28px 18px 18px;
+    border-radius: 24px;
       box-shadow:
         10px 14px 28px rgba(98, 106, 108, .16),
         -8px -8px 20px rgba(255, 255, 255, .92),
@@ -709,8 +758,55 @@
     }
   }
 </style>
+<script type="module">
+  import { startTilt } from "/js/lib/tilt3d.js";
+  import { removeSplash, withButtonLoading } from "/js/lib/feedback.js";
+  startTilt();
+
+  // Nurse role: hand the name/unit the nurse just typed to the dashboard.
+  // It lands pre-filled on the dashboard's sign-in form, so the last step
+  // is just pressing "Sign In & Open Dashboard".
+  const form = document.getElementById("nurseJoinForm");
+  if (form) {
+    const nameIn = document.getElementById("inNurseNameChoose");
+    const unitIn = document.getElementById("inNurseUnitChoose");
+    const err = document.getElementById("errNurseChoose");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameIn.value.trim();
+      if (!name) {
+        err.textContent = "Please enter your name so requests can be acknowledged in your name.";
+        err.classList.remove("hidden");
+        nameIn.focus();
+        return;
+      }
+      try {
+        sessionStorage.setItem("it_nurse_join", JSON.stringify({ name, unit: unitIn.value.trim() }));
+      } catch { /* private mode: dashboard will ask again */ }
+      withButtonLoading(form.querySelector(".btn-nurse-role"), new Promise((res) => {
+        window.location.href = "/nurse";
+        setTimeout(res, 4000); // safety: restore the button if navigation stalls
+      }), "Opening dashboard…");
+    });
+  }
+
+  // Boot complete: drop the splash screen.
+  document.documentElement.classList.add("app-booting");
+  removeSplash();
+  document.querySelectorAll(".chooser-wrap").forEach((el) => el.classList.add("app-fade"));
+  requestAnimationFrame(() => document.documentElement.classList.remove("app-booting"));
+</script>
 </head>
 <body>
+
+<!-- Splash: paints before JS, removed by lib/feedback.js once the app boots -->
+<div class="app-splash" id="splash" aria-hidden="true">
+  <div class="app-splash-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="8" x2="6" y2="16"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="18" y1="9" x2="18" y2="15"/></svg>
+  </div>
+  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
+</div>
 
 <div class="bg-decor" aria-hidden="true">
   <span class="blob blob-a"></span>
@@ -737,7 +833,7 @@
 
   <main class="roles-grid">
     <!-- Patient Card -->
-    <article class="role-card patient-card">
+    <article class="role-card patient-card" data-tilt>
       <div>
         <div class="role-top">
           <span class="role-badge badge-patient">Bedside Patient</span>
@@ -784,7 +880,7 @@
     </article>
 
     <!-- Nurse Card -->
-    <article class="role-card nurse-card">
+    <article class="role-card nurse-card" data-tilt>
       <div>
         <div class="role-top">
           <span class="role-badge badge-nurse">Nurse Station</span>
@@ -821,11 +917,22 @@
       </div>
 
       <div>
-        <a href="/nurse?fresh=1" class="btn-role btn-nurse-role">
-          <span>Start as the Nurse</span>
-          <span class="btn-arrow"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
-        </a>
-        <p class="role-meta">Secure · Multi-bed monitor</p>
+        <form class="nurse-join-form" id="nurseJoinForm" novalidate>
+          <div class="join-field">
+            <label for="inNurseNameChoose">Your name <span class="req" aria-hidden="true">*</span></label>
+            <input id="inNurseNameChoose" autocomplete="name" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40">
+          </div>
+          <div class="join-field">
+            <label for="inNurseUnitChoose">Ward / pod <span class="opt">(optional)</span></label>
+            <input id="inNurseUnitChoose" placeholder="e.g. ICU Pod A" maxlength="40">
+          </div>
+          <div class="join-error hidden" id="errNurseChoose" role="alert"></div>
+          <button type="submit" class="btn-role btn-nurse-role">
+            <span>Sign in as the Nurse</span>
+            <span class="btn-arrow"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+          </button>
+        </form>
+        <p class="role-meta">Your name shows on every acknowledgement</p>
       </div>
       <span class="clay-base" aria-hidden="true"></span>
     </article>
@@ -842,6 +949,18 @@
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M12 17v3M8 20h8"></path><path d="M7 8h7M7 11h10"></path></svg>
         Printable Backup Board
       </a>
+      <a href="/guidelines" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+        Usage Guidelines
+      </a>
+      <a href="/privacy" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7.5 3v5.5c0 4.8-3.2 7.5-7.5 9.5-4.3-2-7.5-4.7-7.5-9.5V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        Privacy Policy
+      </a>
+      <button type="button" class="footer-link" onclick="window.print()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9V4h12v5"></path><rect x="3" y="9" width="18" height="7" rx="2"></rect><path d="M7 13h10v7H7z"></path></svg>
+        Print This Page
+      </button>
     </div>
   </footer>
 </div>

@@ -7,7 +7,7 @@
     "dev": "node server.js",
     "dev:wrangler": "wrangler dev --port 8788 --local",
     "build": "echo Built for Vercel",
-    "check": "esbuild public/js/patient.js public/js/nurse.js public/js/needs.js public/js/lib/sync.js public/js/lib/util.js public/js/lib/audio.js public/js/lib/tts.js public/js/lib/icons.js public/js/lib/ambient.js worker.js --outdir=tmp-check && echo SYNTAX_OK",
+    "check": "esbuild public/js/patient.js public/js/nurse.js public/js/needs.js public/js/lib/sync.js public/js/lib/util.js public/js/lib/audio.js public/js/lib/tts.js public/js/lib/icons.js public/js/lib/ambient.js public/js/lib/tilt3d.js public/js/lib/feedback.js worker.js --outdir=tmp-check && echo SYNTAX_OK",
     "clean": "node -e \"require('fs').rmSync('tmp-check',{recursive:true,force:true})\""
   },
   "keywords": [

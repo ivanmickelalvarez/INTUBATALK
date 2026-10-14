@@ -5,7 +5,7 @@
 import { uid } from "./util.js";
 
 const LS_ROOM = "it_room";
-const handlers = { request: [], ack: [], clear: [], profile: [], profiles: [] };
+const handlers = { request: [], ack: [], clear: [], profile: [], profiles: [], connection: [] };
 let room = null;          // primary room code (for patient tablet)
 let rooms = [];           // array of room codes (for multi-patient nurse dashboard)
 let pollTimer = null;     // behind null until register/attach
@@ -180,6 +180,7 @@ function dispatch(msg) {
     case "clear": handlers.clear.forEach((f) => f(msg)); break;
     case "profile": handlers.profile.forEach((f) => f(msg)); break;
     case "profiles": handlers.profiles.forEach((f) => f(msg)); break;
+    case "connection": handlers.connection.forEach((f) => f(msg)); break;
   }
 }
 
@@ -195,8 +196,9 @@ async function pollOnce() {
   try {
     const query = activeRooms.join(",");
     const r = await fetch(`/api/poll?rooms=${encodeURIComponent(query)}&after=${after}`);
-    if (!r.ok) return;
+    if (!r.ok) { reportConnection(false); return; }
     const data = await r.json();
+    reportConnection(true);
     for (const m of data.messages || []) {
       after = Math.max(after, m.id);
       const cmid = m.cmid || `s${m.id}`;
@@ -217,7 +219,16 @@ async function pollOnce() {
     }
     if (data.profiles) dispatch({ type: "profiles", profiles: data.profiles, ts: data.now });
     if (data.profile) dispatch({ type: "profile", profile: data.profile, caps: data.caps || [], ts: data.now });
-  } catch { /* offline — keep trying */ }
+  } catch { /* offline — keep trying */ reportConnection(false); }
+}
+
+// Connection state derived from poll results (online iff last attempt succeeded).
+let connState = null; // null | "online" | "offline"
+function reportConnection(ok) {
+  const next = ok ? "online" : "offline";
+  if (next === connState) return;
+  connState = next;
+  handlers.connection.forEach((f) => { try { f(ok); } catch { /* listener bug */ } });
 }
 
 function startPolling() {

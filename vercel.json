@@ -5,6 +5,8 @@
     { "source": "/", "destination": "/public/index.html" },
     { "source": "/choose", "destination": "/public/choose.html" },
     { "source": "/nurse", "destination": "/public/nurse.html" },
+    { "source": "/privacy", "destination": "/public/privacy.html" },
+    { "source": "/guidelines", "destination": "/public/guidelines.html" },
     { "source": "/board", "destination": "/public/board.html" },
     { "source": "/dual", "destination": "/public/dual.html" },
     { "source": "/console", "destination": "/INTUBATALK-Test-Console.html" },
@@ -13,6 +15,9 @@
     { "source": "/icons/(.*)", "destination": "/public/icons/$1" },
     { "source": "/sw.js", "destination": "/public/sw.js" },
     { "source": "/manifest.webmanifest", "destination": "/public/manifest.webmanifest" },
+    { "source": "/robots.txt", "destination": "/public/robots.txt" },
+    { "source": "/sitemap.xml", "destination": "/public/sitemap.xml" },
+    { "source": "/(.*\\.txt|.*\\.xml)", "destination": "/public/$1" },
     { "source": "/api/(.*)", "destination": "/api/index.js" }
   ],
   "headers": [
@@ -28,6 +33,12 @@
       "source": "/sw.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Permissions-Policy", "value": "camera=(self), microphone=(self), geolocation=()" }
       ]
     }
   ]

@@ -238,12 +238,116 @@ dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px)
   z-index: -1; pointer-events: none;
 }
 
+/* ---------- 3D clay tilt (data-tilt) glare + depth ---------- */
+[data-tilt] {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* Glare only when an element opts in with .glare, so pseudo-element
+   decorations on cards (auras, tap rings) never conflict. */
+[data-tilt].glare::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    260px circle at var(--glare-x, 50%) var(--glare-y, 30%),
+    rgba(255, 255, 255, .55),
+    transparent 65%
+  );
+  opacity: .5;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  transition: opacity .3s ease;
+}
+[data-tilt].glare:hover::after { opacity: .95; }
+
 /* ---------- Toast entrance ---------- */
 .ack { animation: toastin .28s cubic-bezier(.2, .9, .3, 1.2); }
 @keyframes toastin {
   from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(.92); }
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 }
+
+/* ---------- App splash / loading screen ---------- */
+/* Static in the HTML so it paints before any JS. The app module removes it
+   (removeSplash in lib/feedback.js) once the first real frame is ready. */
+.app-splash {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; background: var(--bg); color: var(--text);
+}
+.app-splash-mark {
+  width: 84px; height: 84px; border-radius: 26px;
+  background: linear-gradient(145deg, #4cb1a0, #379180);
+  box-shadow: var(--clay-raised); display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  animation: splash-breath 2.2s ease-in-out infinite;
+}
+.app-splash-mark svg { width: 44px; height: 44px; }
+.app-splash-word {
+  font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .06em;
+}
+.app-splash-dots { display: flex; gap: 9px; }
+.app-splash-dots::before,
+.app-splash-dots::after,
+.app-splash-dot {
+  content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+  animation: splash-dot 1.3s ease-in-out infinite;
+}
+.app-splash-dots::after { animation-delay: .28s; }
+.app-splash-dot { animation-delay: .14s; }
+@keyframes splash-breath {
+  0%, 100% { transform: scale(1); box-shadow: var(--clay-raised); }
+  50% { transform: scale(1.07); box-shadow: var(--clay-raised), 0 0 0 10px rgba(63, 167, 150, .08); }
+}
+@keyframes splash-dot {
+  0%, 100% { opacity: .35; transform: translateY(0) scale(.85); }
+  40% { opacity: 1; transform: translateY(-4px) scale(1); }
+}
+.app-splash--done { opacity: 0; transition: opacity .24s ease; pointer-events: none; }
+
+/* Content settles in gently once the splash leaves (JS adds .app-booting
+   to <html> in the shell, removes it via removeSplash). */
+.app-booting .app-fade { opacity: 0; }
+.app-fade { transition: opacity .3s ease; }
+
+/* ---------- Button loading spinner ---------- */
+.btn-spinner {
+  width: 15px; height: 15px; border-radius: 50%; flex: none;
+  border: 2.5px solid currentColor; border-top-color: transparent;
+  display: inline-block; animation: spin .7s linear infinite;
+  opacity: .85;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+button[aria-busy="true"] { cursor: progress; }
+
+/* ---------- Connection banner (offline / reconnecting) ---------- */
+.conn-banner {
+  position: sticky; top: 0; z-index: 130;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 34px; padding: 6px 16px;
+  font-size: 13px; font-weight: 700;
+  background: var(--alert-soft); color: #a63a3a;
+  border-bottom: 1px solid rgba(255, 255, 255, .65);
+}
+.conn-banner[data-state="reconnecting"] { background: var(--clay-soft); color: #9c563e; }
+.conn-banner-icon {
+  width: 15px; height: 15px; border-radius: 50%; flex: none;
+  border: 2.5px solid currentColor; border-top-color: transparent;
+  display: inline-block;
+}
+.conn-banner[data-state="offline"] .conn-banner-icon,
+.conn-banner[data-state="live"] .conn-banner-icon {
+  border: none; border-radius: 0; animation: none;
+  background: currentColor;
+  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M2 8.8a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16.2a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="black"/></svg>') center / contain no-repeat;
+          mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"><path d="M2 8.8a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16.2a5 5 0 0 1 6 0"/><circle cx="12" cy="20" r="1" fill="black"/></svg>') center / contain no-repeat;
+}
+.conn-banner--leaving { opacity: 0; transition: opacity .28s ease; }
+
+/* ---------- Offline rocket toast variant ---------- */
+.ack--net { border-left-color: var(--alert); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

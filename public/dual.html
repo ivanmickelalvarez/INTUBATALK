@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Run the INTUBATALK patient tablet and nurse dashboard side by side in one window. Ideal for ward training and program demos.">
+<meta name="color-scheme" content="light">
 <title>INTUBATALK · Dual Interactive Simulator</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +18,7 @@
 * { box-sizing: border-box; }
 body {
   margin: 0; background: var(--bg); color: var(--text);
-  font-family: var(--font-body); height: 100vh; height: 100dvh; overflow: hidden;
+  font-family: var(--font-ui); height: 100vh; height: 100dvh; overflow: hidden;
   display: flex; flex-direction: column;
 }
 .dual-bar {
@@ -81,6 +83,7 @@ iframe {
     <a class="btn btn-ghost btn-sm" href="/" target="_blank">Patient tablet ↗</a>
     <a class="btn btn-ghost btn-sm" href="/nurse" target="_blank">Nurse dashboard ↗</a>
     <a class="btn btn-ghost btn-sm" href="/board" target="_blank">Printable board ↗</a>
+    <a class="btn btn-ghost btn-sm" href="/choose" target="_blank">Role chooser ↗</a>
   </div>
 </header>
 

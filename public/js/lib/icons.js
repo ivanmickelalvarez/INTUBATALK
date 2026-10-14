@@ -23,6 +23,8 @@ export const ICONS = {
   send: `<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>`,
   check: `<path d="M20 6L9 17l-5-5"/>`,
   mic: `<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3M8 21h8"/>`,
+  camera: `<rect x="2" y="6" width="15" height="12" rx="3"/><path d="M17 10l5-3v10l-5-3"/><circle cx="9" cy="12" r="3"/>`,
+  shield: `<path d="M12 3l7.5 3v5.5c0 4.8-3.2 7.5-7.5 9.5-4.3-2-7.5-4.7-7.5-9.5V6z"/><path d="M9 12l2 2 4-4"/>`,
   bell: `<path d="M6 8a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/>`,
   mute: `<path d="M6 8a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6z"/><path d="M10 20a2 2 0 0 0 4 0"/><path d="M17 3l4 4M21 3l-4 4"/>`,
   voice: `<path d="M12 3c-2 3-4 4.5-4 8a4 4 0 0 0 8 0c0-3.5-2-5-4-8z"/><rect x="6" y="17" width="12" height="4" rx="2"/><path d="M9 19h.01M12 19h.01M15 19h.01"/>`,
