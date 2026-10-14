@@ -761,7 +761,9 @@
 <script type="module">
   import { startTilt } from "/js/lib/tilt3d.js";
   import { removeSplash, withButtonLoading } from "/js/lib/feedback.js";
+  import { startAmbient } from "/js/lib/ambient.js";
   startTilt();
+  startAmbient();
 
   // Nurse role: hand the name/unit the nurse just typed to the dashboard.
   // It lands pre-filled on the dashboard's sign-in form, so the last step

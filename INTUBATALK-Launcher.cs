@@ -557,14 +557,14 @@ namespace IntubaTalk
         private Icon customIcon;
 
         // Clinical Claymorphism palette
-        private readonly Color colBg      = Color.FromArgb(243, 241, 236);  // Warm hospital beige
+        private readonly Color colBg      = Color.FromArgb(248, 249, 250);  // Warm hospital beige (matching #f8f9fa)
         private readonly Color colSurface = Color.FromArgb(248, 247, 244);  // Clay card surface
         private readonly Color colLine    = Color.FromArgb(221, 216, 207);  // Border line
         private readonly Color colText    = Color.FromArgb(38, 51, 64);     // Primary text
         private readonly Color colSoft    = Color.FromArgb(93, 108, 120);   // Secondary text
-        private readonly Color colMint    = Color.FromArgb(63, 167, 150);   // Patient mint
+        private readonly Color colMint    = Color.FromArgb(56, 152, 136);   // Patient mint (matching #389884)
         private readonly Color colMintDk  = Color.FromArgb(51, 138, 124);   // Patient dark mint
-        private readonly Color colTeal    = Color.FromArgb(63, 127, 167);   // Nurse teal
+        private readonly Color colTeal    = Color.FromArgb(32, 112, 144);   // Nurse teal (matching #32709c)
         private readonly Color colTealDk  = Color.FromArgb(47, 101, 136);   // Nurse dark teal
 
         public RoleChooserForm(string initialRoute, bool startInTray)

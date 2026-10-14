@@ -12,6 +12,7 @@ import { NEEDS } from "./needs.js";
 const LS_NURSES = "it_nurses";
 const LS_ACTIVE_NURSE = "it_active_nurse_id";
 const LS_FEED_PREFIX = "it_nurse_feed_";
+const LS_PATIENTS_PREFIX = "it_nurse_patients_";
 const LS_MUTE = "it_nurse_mute";
 const DEMO = "__demo__";
 
@@ -87,6 +88,35 @@ function persistActiveNurse() {
   }
 }
 
+// Remove a nurse profile from the saved list
+function removeNurse(nurseId) {
+  if (!confirm(`Remove this nurse profile from the dashboard?\n\nThis will unsign this nurse from the dashboard. The nurse's data will be cleared from this device, but no data is sent anywhere or recorded.`)) return;
+  nurses = nurses.filter((n) => n.id !== nurseId);
+  saveNursesList();
+  if (activeNurseId === nurseId) {
+    localStorage.removeItem(LS_ACTIVE_NURSE);
+    activeNurseId = null;
+    currentNurse = null;
+    rooms = [];
+    feed = [];
+    renderJoin();
+  } else {
+    selectNurse(nurses[0]?.id || null);
+  }
+}
+
+// Log out the current nurse (keeps profile in saved list, just clears active session)
+function logoutNurse(nurseId) {
+  localStorage.removeItem(LS_ACTIVE_NURSE);
+  activeNurseId = null;
+  currentNurse = null;
+  rooms = [];
+  feed = [];
+  patients = {};
+  persistPatients();
+  renderJoin();
+}
+
 function selectNurse(nurseId) {
   const target = nurses.find((n) => n.id === nurseId);
   if (!target) return;
@@ -95,6 +125,7 @@ function selectNurse(nurseId) {
   persistActiveNurse();
   rooms = currentNurse.rooms || [];
   feed = loadJSON(LS_FEED_PREFIX + currentNurse.id, []);
+  patients = loadJSON(LS_PATIENTS_PREFIX + currentNurse.id, {});
   patientFilter = "all";
   currentFilter = "all";
   sync.attachRooms(rooms);
@@ -557,6 +588,10 @@ const persistFeed = () => {
   if (currentNurse) saveJSON(LS_FEED_PREFIX + currentNurse.id, feed.slice(0, 80));
 };
 
+const persistPatients = () => {
+  if (currentNurse) saveJSON(LS_PATIENTS_PREFIX + currentNurse.id, patients);
+};
+
 // ------------------------------------------------------------------ connect & disconnect beds
 
 function openConnectDialog() {
@@ -751,9 +786,10 @@ async function doConnectBed() {
 
   updateTopBar();
   renderDashboard();
-  toastToast(`${newCodes.length} patient${newCodes.length > 1 ? "s" : ""} added to ${currentNurse?.name || "dashboard"}: ${newCodes.join(", ")}`);
   renderPatientStatusRail();
-}
+  persistPatients();
+  toastToast(`${newCodes.length} patient${newCodes.length > 1 ? "s" : ""} added to ${currentNurse?.name || "dashboard"}: ${newCodes.join(", ")}`);
+
 
 function disconnectBed(codeVal) {
   const p = patients[codeVal];
@@ -767,6 +803,7 @@ function disconnectBed(codeVal) {
   }
   sync.removeRoom(codeVal);
   delete patients[codeVal];
+  persistPatients();
 
   if (patientFilter === codeVal) patientFilter = "all";
   updateTopBar();
@@ -787,9 +824,10 @@ function openNurseProfileDialog() {
         <div style="font-weight:800;font-size:14px">👩‍⚕️ ${esc(n.name)}</div>
         <div style="font-size:12px;color:var(--text-soft)">${esc(n.unit || "ICU")} · <b>${(n.rooms || []).length} ${(n.rooms || []).length === 1 ? "bed" : "beds"}</b></div>
       </div>
-      ${n.id === currentNurse?.id
-        ? `<span class="badge ok" style="font-size:11px">Active</span>`
-        : `<button class="btn btn-sm btn-ghost btn-switch-to" data-nid="${esc(n.id)}">Select</button>`}
+      <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+        <button class="btn btn-sm btn-ghost logout-nurse" data-nid="${esc(n.id)}" style="flex:1">Log out</button>
+        ${n.id === currentNurse?.id ? `<span class="badge ok" style="font-size:11px">Active</span>` : `<button class="btn btn-sm btn-ghost btn-switch-to" data-nid="${esc(n.id)}">Select</button>`}
+      </div>
     </div>
   `).join("");
 
@@ -797,6 +835,14 @@ function openNurseProfileDialog() {
     btn.addEventListener("click", () => {
       selectNurse(btn.dataset.nid);
       dlg.close();
+    });
+  });
+  $$(".logout-nurse", listEl).forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (confirm(`Log out ${esc(n.name)} from the dashboard?`)) {
+        logoutNurse(btn.dataset.nid);
+        dlg.close();
+      }
     });
   });
 
@@ -1033,6 +1079,7 @@ function onIncoming(msg) {
       online: true,
     };
   }
+  persistPatients();
 
   const existing = feed.find((x) => x.cmid === r.cmid);
   if (existing && existing.status !== "new") return;
@@ -1115,6 +1162,7 @@ function onProfilesUpdate(msg) {
     }
   }
   if (changed) {
+    persistPatients();
     renderPatientList();
     renderPatientFilterBar();
     renderPatientStatusRail();

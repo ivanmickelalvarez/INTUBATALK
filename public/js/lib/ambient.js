@@ -5,12 +5,11 @@
 // prefers-reduced-motion and pauses itself when the tab is hidden.
 // The trace is driven by a short timer rather than requestAnimationFrame
 // so it keeps moving in webviews that throttle or skip rAF.
+// Upgraded with 3D depth layers, rotating planes, and enhanced interaction.
 
 let started = false;
 let loopTimer = null;
-
-const reduced = () =>
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+let rAF = null;
 
 // A stylized ECG beat, one cycle mapped to 0..1 of the period.
 // Returns -1..1; 0 is the isoelectric baseline.
@@ -25,18 +24,72 @@ const beat = (p) => {
   );
 };
 
+// 3D rotation state for the background planes
+let rotX = 0, rotY = 0;
+
 function startAmbient() {
   if (started) return;
   started = true;
+
   if (reduced()) return;
 
   // Idempotency: drop any orphaned layers from a previous instance.
-  document.querySelectorAll(".breath-bg, .ambient-canvas").forEach((el) => el.remove());
+  document.querySelectorAll(".breath-bg, .ambient-canvas, .ambient-plane").forEach((el) => el.remove());
+
+  // --- 3D rotating planes layer ---
+  const planeContainer = document.createElement("div");
+  planeContainer.className = "ambient-plane-container";
+  planeContainer.style.cssText = `
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    transform-style: preserve-3d; overflow: hidden;
+  `;
+  document.body.prepend(planeContainer);
+
+  // Create 3 rotating planes with subtle gradients
+  const planeColors = [
+    "rgba(63, 167, 150, .08)",
+    "rgba(217, 134, 107, .07)",
+    "rgba(63, 127, 167, .05)"
+  ];
+  const planeSizes = ["300%", "350%", "400%"];
+
+  for (let i = 0; i < 3; i++) {
+    const plane = document.createElement("div");
+    plane.className = "ambient-plane";
+    plane.style.cssText = `
+      position: absolute; border-radius: 50%; filter: blur(80px);
+      width: ${planeSizes[i]}; height: ${planeSizes[i]};
+      background: ${planeColors[i]}; left: 50%; top: 50%;
+      transform: translate(-50%, -50%) rotateY(${i * 120}deg);
+      animation: orbit 20s ease-in-out infinite;
+    `;
+    plane.style.setProperty("--delay", `${i * 6.67}s`);
+    planeContainer.appendChild(plane);
+  }
+
+  // Add keyframes if not already present
+  if (!document.getElementById("ambient-keyframes")) {
+    const style = document.createElement("style");
+    style.id = "ambient-keyframes";
+    style.textContent = `
+      @keyframes orbit {
+        0%, 100% { transform: translate(-50%, -50%) rotateY(0deg) rotateX(0deg) translateZ(0px); }
+        33% { transform: translate(-50%, -50%) rotateY(120deg) rotateX(30deg) translateZ(80px); }
+        66% { transform: translate(-50%, -50%) rotateY(240deg) rotateX(-30deg) translateZ(-80px); }
+      }
+      @keyframes breathe {
+        0%, 100% { transform: scale(1); opacity: .75; }
+        50% { transform: scale(1.08); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 
   // Breathing glow layer
   const glow = document.createElement("div");
   glow.className = "breath-bg";
   glow.setAttribute("aria-hidden", "true");
+  glow.style.animation = "breathe 7s ease-in-out infinite";
   document.body.prepend(glow);
 
   // ECG + drifting orbs canvas layer
@@ -49,6 +102,7 @@ function startAmbient() {
 
   let w = 0, h = 0;
   let orbs = [];
+
   const resize = () => {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     w = canvas.width = Math.floor(innerWidth * dpr);
@@ -88,6 +142,11 @@ function startAmbient() {
     if (now === undefined) now = performance.now();
     const dt = Math.min(60, now - last) / 1000;
     last = now;
+
+    // Update 3D rotation
+    rotX += 0.02;
+    rotY += 0.015;
+
     ctx.clearRect(0, 0, w, h);
 
     // --- drifting orbs with pointer parallax ---
@@ -107,6 +166,25 @@ function startAmbient() {
       ctx.beginPath();
       ctx.arc(px, py, o.r, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // --- 3D rotating plane silhouettes (soft projection) ---
+    const bases = [h * 0.62, h * 0.70, h * 0.76];
+    for (let i = 0; i < 3; i++) {
+      const a = 0.06 + i * 0.01;
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.rotate(rotX + i * 0.5);
+      ctx.rotate(rotY + i * 0.3);
+      ctx.translate(-w / 2, -h / 2);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = planeColors[i % 3] || "rgba(63,167,150,.08)";
+      ctx.beginPath();
+      const size = (w > h ? w : h) * 0.4;
+      const rx = size * 0.6, ry = size * 0.3;
+      ctx.ellipse(w / 2, h / 2, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // --- ECG traces ---
@@ -133,16 +211,21 @@ function startAmbient() {
     }
   };
 
-  let raf = 0;
-  const loop = (now) => { draw(now); raf = requestAnimationFrame(loop); };
+  let lastRAF = 0;
+  const loop = (now) => {
+    draw(now);
+    lastRAF = requestAnimationFrame(loop);
+  };
+
+  // Use requestAnimationFrame for smooth animation, with setInterval fallback
   const startLoop = () => {
-    if (raf || loopTimer) return;
-    loopTimer = setInterval(() => draw(), 40); // fallback for throttled rAF
-    raf = requestAnimationFrame(loop);
+    if (rAF || loopTimer) return;
+    rAF = requestAnimationFrame(loop);
+    loopTimer = setInterval(() => { /* fallback */ }, 40);
   };
   const stopLoop = () => {
     if (loopTimer) { clearInterval(loopTimer); loopTimer = null; }
-    if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (rAF) { cancelAnimationFrame(rAF); rAF = 0; }
   };
 
   startLoop();
@@ -152,4 +235,8 @@ function startAmbient() {
   });
 }
 
-export { startAmbient };
+// Hook up reduced-motion early
+const reduced = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+export { startAmbient };

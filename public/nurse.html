@@ -151,5 +151,11 @@ if ("serviceWorker" in navigator) {
 }
 </script>
 <script type="module" src="/js/nurse.js"></script>
+
+  <!-- Initialize ambient background -->
+  <script type="module">
+    import { startAmbient } from "/js/lib/ambient.js";
+    startAmbient();
+  </script>
 </body>
 </html>
