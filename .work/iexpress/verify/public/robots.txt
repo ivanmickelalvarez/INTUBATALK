@@ -1,0 +1,7 @@
+# INTUBATALK — ICU clinical communication system
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /sw.js
+
+Sitemap: https://site-a166399491ee4290b4637b32520266e3.freebuff.page/sitemap.xml

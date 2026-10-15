@@ -1,0 +1,4 @@
+;!@Install@!UTF-8!
+Title="INTUBATALK 2.2.0 Setup"
+RunProgram="install-sfx.cmd"
+;!@InstallEnd@!

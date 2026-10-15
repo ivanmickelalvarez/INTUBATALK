@@ -60,6 +60,7 @@ const ensureSchema = (db) => {
       status TEXT NOT NULL DEFAULT 'new',
       patient TEXT,
       bed TEXT,
+      nurse TEXT,
       created_ms INTEGER NOT NULL
     )`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_msg_room ON messages(room, id)`),
@@ -68,7 +69,10 @@ const ensureSchema = (db) => {
       caps TEXT NOT NULL DEFAULT '{}',
       updated_ms INTEGER NOT NULL DEFAULT 0
     )`),
-  ]).catch((err) => { schemaPromise = null; throw err; });
+  ]).then(async () => {
+    // Upgrade databases created before nurse acknowledgements stored the nurse name.
+    try { await db.prepare("ALTER TABLE messages ADD COLUMN nurse TEXT").run(); } catch { /* already exists */ }
+  }).catch((err) => { schemaPromise = null; throw err; });
   return schemaPromise;
 };
 
@@ -186,6 +190,10 @@ async function createMessage(request, env) {
   const risk = kind === "emergency" ? "high" : String(b.risk ?? "normal") === "high" ? "high" : "normal";
   const patient = String(b.patientName ?? b.patient ?? "").slice(0, 40) || "Patient";
   const bed = String(b.bed ?? "").slice(0, 12);
+  if (cmid) {
+    const existing = await env.DB.prepare("SELECT id FROM messages WHERE room=? AND cmid=? LIMIT 1").bind(b.room, cmid).first();
+    if (existing) return J({ ok: true, id: existing.id, duplicate: true });
+  }
   const r = await env.DB.prepare(
     "INSERT INTO messages (room, cmid, kind, need, label, sentence, urgent, risk, patient, bed, created_ms) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(b.room, cmid, kind, need, label, sentence, kind === "emergency" ? 1 : 0, risk, patient, bed, Date.now()).run();
@@ -200,9 +208,13 @@ async function ack(request, env) {
   if (cmid) {
     await env.DB.prepare("UPDATE messages SET status='ack' WHERE room=? AND cmid=?").bind(b.room, cmid).run();
   }
+  if (cmid) {
+    const existingAck = await env.DB.prepare("SELECT id FROM messages WHERE room=? AND cmid=? AND kind='ack' LIMIT 1").bind(b.room, cmid).first();
+    if (existingAck) return J({ ok: true, nurse: nurse || null, duplicate: true });
+  }
   await env.DB.prepare(
-    "INSERT INTO messages (room, cmid, kind, need, sentence, patient, bed, created_ms) VALUES (?,?,?,?,?,?,?,?)"
-  ).bind(b.room, cmid || null, "ack", "ack", nurse ? `${nurse} acknowledged` : "Nurse acknowledged", String(b.patient ?? "").slice(0, 40) || "", String(b.bed ?? "").slice(0, 12), Date.now()).run();
+    "INSERT INTO messages (room, cmid, kind, need, sentence, patient, bed, nurse, created_ms) VALUES (?,?,?,?,?,?,?,?,?)"
+  ).bind(b.room, cmid || null, "ack", "ack", nurse ? `${nurse} acknowledged` : "Nurse acknowledged", String(b.patient ?? "").slice(0, 40) || "", String(b.bed ?? "").slice(0, 12), nurse || null, Date.now()).run();
   return J({ ok: true, nurse: nurse || null });
 }
 
@@ -252,7 +264,7 @@ async function poll(env, url) {
 
   const placeholders = roomList.map(() => "?").join(",");
   const { results } = await env.DB.prepare(
-    `SELECT id, room, cmid, kind, need, label, sentence, urgent, risk, status, patient, bed, created_ms
+    `SELECT id, room, cmid, kind, need, label, sentence, urgent, risk, status, patient, bed, nurse, created_ms
      FROM messages WHERE room IN (${placeholders}) AND id > ? ORDER BY id ASC LIMIT 250`
   ).bind(...roomList, after).all();
 
@@ -261,7 +273,12 @@ async function poll(env, url) {
     const rp = await env.DB.prepare(
       `SELECT name, bed, last_seen_ms FROM rooms WHERE room = ?`
     ).bind(rCode).first();
-    profiles[rCode] = rp ? { name: rp.name, bed: rp.bed, online: Date.now() - rp.last_seen_ms < 15000 } : { name: "Patient", bed: "", online: false };
+    let caps = [];
+    try {
+      const capRow = await env.DB.prepare("SELECT caps FROM room_caps WHERE room=?").bind(rCode).first();
+      caps = capRow?.caps ? (JSON.parse(capRow.caps).caps || []) : [];
+    } catch { /* older/invalid capability rows do not block polling */ }
+    profiles[rCode] = rp ? { name: rp.name, bed: rp.bed, online: Date.now() - rp.last_seen_ms < 15000, caps } : { name: "Patient", bed: "", online: false, caps };
   }
   const primaryCode = roomList[0];
 

@@ -5,7 +5,8 @@ import { speak, stopSpeech } from "./lib/tts.js";
 import * as sync from "./lib/sync.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
-import { startTilt } from "./lib/tilt3d.js";
+import { attach as attachTilt, startTilt } from "./lib/tilt3d.js"; // 3D tilt for the gate card + tiles
+
 import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS, CAPS, CAPS_BY_KEY, DEFAULT_PROFILE } from "./needs.js";
 
@@ -42,6 +43,7 @@ async function startSession() {
   } catch {
     // Offline demo: a locally generated code still works via tab broadcast.
     room = room || String(1000 + Math.floor(Math.random() * 9000));
+    sync.attach(room);
   }
   const remembered = sync.getRememberedRoom();
   if (!room) room = remembered;
@@ -235,7 +237,7 @@ function renderTiles() {
       warns.includes(key) ? "tile tile--mint" :
       custom ? "tile tile--custom" : "tile";
     const btn = document.createElement("button");
-    btn.className = cls;
+    btn.className = cls + " glare";
     btn.style.setProperty("--i", `${Math.min(grid.children.length, 12) * 45}ms`);
     btn.innerHTML = `<span class="tile-ic" style="display:flex">${svg(iconName, "tile-ic")}</span><span class="tile-lbl">${esc(label)}</span>`;
     if (custom) {
@@ -250,6 +252,7 @@ function renderTiles() {
       });
       btn.appendChild(rm);
     }
+    if (key !== "emergency") attachTilt(btn, { max: 0.6 }); // 3D lean on every tile
     btn.addEventListener("click", () => {
       audio.unlock();
       btn.classList.remove("tapped");
@@ -341,6 +344,9 @@ function tileTap(key) {
 // ------------------------------------------------------------------ panels
 
 function openPanel(kind) {
+  // Leaving the blink panel (or any panel) for another one must release the
+  // camera immediately — never keep a live stream attached to a removed <video>.
+  if (kind !== "blink") stopBlinkCamera();
   const panel = $("#panel");
   panel.classList.remove("hidden");
   const head = (icon, title, note = "") => `
@@ -538,11 +544,25 @@ let blinkStream = null;
 async function openBlinkCamera() {
   const frame = $("#bCamFrame");
   const err = $("#bCamErr");
-  if (!frame) return;
+  const video = $("#bCamVideo");
+  if (!frame || !video) return;
   err?.classList.add("hidden");
-  if (blinkStream) { frame.classList.remove("hidden"); return; }
+
+  // Re-attach a previously granted stream to the (possibly re-rendered) video
+  // element so the feed never comes back as a black frame.
+  if (blinkStream) {
+    if (video.srcObject !== blinkStream) video.srcObject = blinkStream;
+    await video.play().catch(() => {});
+    frame.classList.remove("hidden");
+    return;
+  }
   if (!navigator.mediaDevices?.getUserMedia) {
-    if (err) { err.textContent = "This browser does not support camera access. Use the assisted blink buttons instead."; err.classList.remove("hidden"); }
+    if (err) {
+      err.textContent = !window.isSecureContext
+        ? "Camera access needs a secure connection (HTTPS or localhost). Over plain Wi-Fi HTTP, use a direct localhost connection or fall back to the blink buttons."
+        : "This browser does not support camera access. Use the assisted blink buttons instead.";
+      err.classList.remove("hidden");
+    }
     return;
   }
   try {
@@ -550,15 +570,13 @@ async function openBlinkCamera() {
       video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
       audio: false,
     });
-    const video = $("#bCamVideo");
-    if (video) {
-      video.srcObject = blinkStream;
-      await video.play().catch(() => {});
-    }
+    video.srcObject = blinkStream;
+    await video.play().catch(() => {});
     frame.classList.remove("hidden");
     audio.unlock();
-    toast("Camera is live. The nurse can watch from the bedside screen.");
+    toast("Camera is live. Blinks can be counted from the bedside screen.");
   } catch (e) {
+    blinkStream = null;
     if (err) {
       err.textContent = e?.name === "NotAllowedError"
         ? "Camera permission was denied. Allow camera access for this site, then tap Enable camera again."
@@ -573,6 +591,8 @@ function stopBlinkCamera() {
   blinkStream = null;
   const frame = $("#bCamFrame");
   if (frame) frame.classList.add("hidden");
+  const video = $("#bCamVideo");
+  if (video) video.srcObject = null;
 }
 
 const wireBack = () => $("#pBack")?.addEventListener("click", goHome);
@@ -673,6 +693,7 @@ h1{font-size:28px;margin:16px 22px 2px;letter-spacing:.01em}.sub{margin:0 22px 1
 document.addEventListener("click", () => audio.unlock(), { once: true });
 hydrateIcons();
 startAmbient();
+startTilt(); // 3D lean + glare on the [data-tilt] gate card
 
 // Wipe any previous session so the patient always inputs a new login
 sync.clearSession();

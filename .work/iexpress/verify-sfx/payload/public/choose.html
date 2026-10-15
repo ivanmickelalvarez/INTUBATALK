@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<meta name="description" content="Choose your role in INTUBATALK: a bedside tablet for intubated ICU patients to speak without a voice, or the multi-bed nurse dashboard. Blink yes/no, spell, call for help.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Choose Your Role — Patient Tablet or Nurse Dashboard</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  :root {
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --nurse: #3f7fa7;
+    --nurse-deep: #2f6588;
+    --nurse-ink: #1e4a64;
+    --patient: #3fa796;
+    --patient-deep: #2f7f71;
+    --patient-ink: #215a51;
+    /* Refined clay shadows — one shared language */
+    --outer-soft: 16px 20px 40px rgba(98, 106, 108, .18);
+    --outer-light: -14px -14px 32px rgba(255, 255, 255, .95);
+    --inner-hi: inset 2px 2px 5px rgba(255, 255, 255, .95);
+    --inner-lo: inset -5px -7px 14px rgba(96, 100, 110, .12);
+    --well-shadow:
+      inset 4px 5px 11px rgba(98, 106, 108, .16),
+      inset -3px -3px 8px rgba(255, 255, 255, .9),
+      0 1px 0 rgba(255, 255, 255, .75);
+  }
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* ---------- Ambient background ---------- */
+  .bg-decor {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .bg-decor .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(70px);
+  }
+  .blob-a {
+    width: 520px; height: 520px;
+    top: -160px; right: -120px;
+    background: radial-gradient(circle, rgba(63,167,150,.16), transparent 68%);
+  }
+  .blob-b {
+    width: 560px; height: 560px;
+    bottom: -220px; left: -160px;
+    background: radial-gradient(circle, rgba(63,127,167,.14), transparent 68%);
+  }
+  .blob-c {
+    width: 420px; height: 420px;
+    top: 38%; left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(217,134,107,.10), transparent 68%);
+  }
+  .bg-decor .dots {
+    position: absolute; inset: 0;
+    background-image: radial-gradient(rgba(98,106,108,.10) 1.2px, transparent 1.2px);
+    background-size: 26px 26px;
+    mask-image: radial-gradient(70% 55% at 50% 30%, black, transparent 78%);
+    opacity: .5;
+  }
+
+  /* ---------- Layout ---------- */
+  .chooser-wrap {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+    padding: calc(22px + var(--safe-t)) 20px calc(24px + var(--safe-b));
+    max-width: 1020px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- Header ---------- */
+  .chooser-header {
+    text-align: center;
+    margin-top: 6px;
+    margin-bottom: 30px;
+    animation: rise .5s cubic-bezier(.2, .9, .3, 1.1) both;
+  }
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 14px;
+    padding: 9px 24px 9px 10px;
+    border-radius: 999px;
+    background: linear-gradient(175deg, #fdfcfb, #f1efe9);
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow:
+      8px 10px 22px rgba(98, 106, 108, .16),
+      -6px -6px 14px rgba(255, 255, 255, .9),
+      var(--inner-hi),
+      inset -3px -4px 8px rgba(96, 100, 110, .08);
+  }
+  .brand-mark-lg {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: linear-gradient(150deg, #55bcab 0%, var(--accent-deep) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, .75);
+    box-shadow:
+      5px 6px 13px rgba(51, 138, 124, .32),
+      inset 2px 2px 3px rgba(255, 255, 255, .6),
+      inset -2px -3px 5px rgba(23, 82, 73, .35);
+  }
+  .brand-mark-lg::after {
+    content: "";
+    position: absolute;
+    top: 5px; left: 7px; right: 18px;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .6), transparent);
+    pointer-events: none;
+  }
+  .brand-mark-lg svg {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+    filter: drop-shadow(0 1px 1px rgba(23, 82, 73, .45));
+  }
+  .brand-badge h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 5vw, 27px);
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+    letter-spacing: .045em;
+    line-height: 1;
+    text-shadow: 0 1px 0 rgba(255,255,255,.85);
+  }
+  .chooser-header p.tag {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(15.5px, 4vw, 18px);
+    color: var(--text-soft);
+    margin: 0 0 16px;
+    line-height: 1.45;
+    text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  }
+  .chooser-header p.sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-soft);
+    margin: 0;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1.5px solid rgba(255, 255, 255, .8);
+    box-shadow: var(--well-shadow);
+  }
+  .pulse-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--patient);
+    box-shadow:
+      0 0 0 4px rgba(63,167,150,.16),
+      inset 1px 1px 2px rgba(255,255,255,.6);
+    flex-shrink: 0;
+  }
+
+  /* ---------- Role cards ---------- */
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+    margin-bottom: 28px;
+    align-items: stretch;
+  }
+  .role-card {
+    background: linear-gradient(168deg, #fdfcfb 0%, #f6f4ee 55%, #edebe4 100%);
+    border-radius: 30px;
+    padding: 34px 28px 24px;
+    box-shadow:
+      var(--outer-soft),
+      var(--outer-light),
+      var(--inner-hi),
+      var(--inner-lo);
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    /* keep top sheen + aura inside rounded corners */
+    overflow: hidden;
+    isolation: isolate;
+    transition: transform .22s cubic-bezier(.2, .9, .3, 1.15), box-shadow .22s ease;
+    animation: rise .55s cubic-bezier(.2, .9, .3, 1.1) both;
+  }
+  .role-card:nth-child(2) { animation-delay: .08s; }
+
+  /* Soft color aura inside each card */
+  .role-card::after {
+    content: "";
+    position: absolute;
+    top: -90px; right: -90px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
+  }
+  .patient-card::after {
+    background: radial-gradient(circle, rgba(63, 167, 150, .15), transparent 68%);
+  }
+  .nurse-card::after {
+    background: radial-gradient(circle, rgba(63, 127, 167, .15), transparent 68%);
+  }
+  /* Bottom clay thickness */
+  .role-card .clay-base {
+    position: absolute;
+    left: 22px; right: 22px; bottom: 8px;
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(98,106,108,.08);
+    filter: blur(6px);
+    z-index: -1;
+  }
+
+  @media (hover: hover) {
+    .role-card:hover {
+      transform: translateY(-6px);
+      box-shadow:
+        22px 28px 52px rgba(98, 106, 108, .22),
+        -16px -16px 36px rgba(255, 255, 255, 1),
+        inset 2px 2px 5px rgba(255, 255, 255, .96),
+        inset -5px -7px 14px rgba(96, 100, 110, .10);
+    }
+  }
+  .role-card:has(.btn-role:focus-visible) {
+    outline: 3px solid var(--accent);
+    outline-offset: 4px;
+  }
+
+  /* Clay seam along the top of each card */
+  .role-card::before {
+    content: "";
+    position: absolute;
+    top: 13px; left: 28px; right: 28px;
+    height: 7px;
+    border-radius: 999px;
+    box-shadow:
+      inset 1px 2px 3px rgba(0, 0, 0, .18),
+      inset 0 -1px 1px rgba(255, 255, 255, .75),
+      0 1px 1px rgba(255, 255, 255, .8);
+  }
+  .patient-card::before {
+    background: linear-gradient(90deg, var(--patient), var(--patient-deep));
+  }
+  .nurse-card::before {
+    background: linear-gradient(90deg, var(--nurse), var(--nurse-deep));
+  }
+
+  .role-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 8px 0 18px;
+  }
+  .role-badge {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 8px 15px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(255, 255, 255, .9);
+    box-shadow:
+      4px 5px 10px rgba(98, 106, 108, .15),
+      -2px -2px 6px rgba(255, 255, 255, .85),
+      inset 1px 1px 2px rgba(255, 255, 255, .85),
+      inset -1px -1px 2px rgba(96, 100, 110, .08);
+  }
+  .badge-patient {
+    background: linear-gradient(135deg, #ddf2ec, #b9e4d8);
+    color: var(--patient-ink);
+    text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  }
+  .badge-nurse {
+    background: linear-gradient(135deg, #deeaf3, #c2daf0);
+    color: var(--nurse-ink);
+    text-shadow: 0 1px 0 rgba(255,255,255,.6);
+  }
+  .role-step {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    color: var(--text-faint);
+    background: var(--surface-2);
+    border: 1.5px solid rgba(255,255,255,.8);
+    box-shadow: var(--well-shadow);
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-shadow: 0 1px 0 rgba(255,255,255,.8);
+    flex-shrink: 0;
+  }
+
+  .role-icon-circle {
+    width: 66px;
+    height: 66px;
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    position: relative;
+    border: 2px solid rgba(255, 255, 255, .95);
+    flex-shrink: 0;
+    box-shadow:
+      8px 10px 18px rgba(98, 106, 108, .18),
+      -5px -5px 10px rgba(255, 255, 255, .9),
+      inset 2px 2px 3px rgba(255, 255, 255, .9),
+      inset -3px -4px 6px rgba(96, 100, 110, .10);
+  }
+  .role-icon-circle::after {
+    content: "";
+    position: absolute;
+    top: 6px; left: 9px; right: 25px;
+    height: 14px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .75), transparent);
+    pointer-events: none;
+  }
+  .icon-circle-patient {
+    background: linear-gradient(145deg, #eaf8f4, #c6ece2);
+    color: var(--patient-deep);
+    /* tinted outer ring so the icon feels seated in the card */
+    outline: 6px solid rgba(63,167,150,.10);
+  }
+  .icon-circle-nurse {
+    background: linear-gradient(145deg, #eef3f9, #cfdfee);
+    color: var(--nurse-deep);
+    outline: 6px solid rgba(63,127,167,.10);
+  }
+  .role-icon-circle svg {
+    filter: drop-shadow(0 1px 0 rgba(255,255,255,.8));
+  }
+
+  .role-card h2 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 5.5vw, 27px);
+    font-weight: 700;
+    color: var(--text);
+    margin: 2px 0 8px;
+    line-height: 1.18;
+    letter-spacing: -.005em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.8);
+  }
+  .role-card p.desc {
+    font-size: 14.8px;
+    line-height: 1.58;
+    color: var(--text-soft);
+    margin: 0 0 18px;
+    word-break: break-word;
+    text-wrap: pretty;
+  }
+
+  /* Concave clay well for the feature list */
+  .feature-list {
+    background: #e9e7e1;
+    border-radius: 20px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    border: 1.5px solid rgba(255, 255, 255, .8);
+    box-shadow: var(--well-shadow);
+  }
+  .role-card .feature-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    font-size: 13.8px;
+    font-weight: 600;
+    color: #37434f;
+    padding: 6px 0;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .role-card .feature-item + .feature-item {
+    border-top: 1px dashed rgba(98,106,108,.16);
+  }
+  .check {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1.5px solid rgba(255,255,255,.9);
+    box-shadow:
+      3px 4px 8px rgba(98,106,108,.16),
+      -2px -2px 5px rgba(255,255,255,.9),
+      inset 1px 1px 2px rgba(255,255,255,.9);
+  }
+  .check svg { width: 14px; height: 14px; }
+  .check-patient {
+    background: linear-gradient(145deg, #dcf2ec, #b8e2d6);
+    color: var(--patient-ink);
+  }
+  .check-nurse {
+    background: linear-gradient(145deg, #dde9f3, #bfd6ec);
+    color: var(--nurse-ink);
+  }
+
+  /* ---------- Primary role buttons: chunky 3D clay ---------- */
+  .btn-role {
+    width: 100%;
+    padding: 15px 16px;
+    font-size: clamp(15.5px, 4.4vw, 17px);
+    font-weight: 800;
+    letter-spacing: .015em;
+    border-radius: 19px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    position: relative;
+    overflow: hidden;
+    transition: transform .13s ease, box-shadow .13s ease, filter .13s ease;
+    min-height: 58px;
+    user-select: none;
+    -webkit-user-select: none;
+    border: 1px solid rgba(255, 255, 255, .45);
+  }
+  /* Gloss highlight across the top of the button */
+  .btn-role::before {
+    content: "";
+    position: absolute;
+    top: 3px; left: 10px; right: 10px;
+    height: 46%;
+    border-radius: 14px 14px 999px 999px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .42), transparent 85%);
+    pointer-events: none;
+  }
+  .btn-role > * { position: relative; }
+  .btn-role:hover { filter: brightness(1.05); }
+  .btn-role:active { filter: none; }
+  .btn-role .btn-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.22);
+    box-shadow:
+      inset 0 1px 2px rgba(255,255,255,.55),
+      0 1px 2px rgba(0,0,0,.18);
+    flex-shrink: 0;
+  }
+  .btn-role .btn-arrow svg { transition: transform .18s ease; }
+  @media (hover: hover) {
+    .btn-role:hover .btn-arrow svg { transform: translateX(2px); }
+  }
+  .btn-role:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+  }
+
+  .btn-patient-role {
+    background: linear-gradient(165deg, #52b8a7 0%, var(--patient-deep) 100%);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(23, 82, 73, .4);
+    border-bottom: 4px solid #245e55;
+    box-shadow:
+      0 12px 22px rgba(51, 138, 124, .34),
+      0 2px 0 rgba(36, 94, 85, .35),
+      inset 0 2px 2px rgba(255, 255, 255, .5),
+      inset 0 -3px 6px rgba(23, 82, 73, .28);
+  }
+  .btn-patient-role:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 16px 28px rgba(51, 138, 124, .38),
+      0 3px 0 rgba(36, 94, 85, .35),
+      inset 0 2px 2px rgba(255, 255, 255, .55),
+      inset 0 -3px 6px rgba(23, 82, 73, .28);
+  }
+  .btn-patient-role:active {
+    transform: translateY(3px);
+    border-bottom-width: 1px;
+    box-shadow:
+      inset 4px 5px 10px rgba(23, 82, 73, .38),
+      inset -2px -2px 6px rgba(255, 255, 255, .22);
+  }
+  .btn-patient-role:active::before { opacity: 0; }
+  .btn-nurse-role {
+    background: linear-gradient(165deg, #5a9cc4 0%, var(--nurse-deep) 100%);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(18, 56, 82, .4);
+    border-bottom: 4px solid #234d6b;
+    box-shadow:
+      0 12px 22px rgba(47, 101, 136, .34),
+      0 2px 0 rgba(35, 77, 107, .35),
+      inset 0 2px 2px rgba(255, 255, 255, .5),
+      inset 0 -3px 6px rgba(18, 56, 82, .30);
+  }
+  .btn-nurse-role:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 16px 28px rgba(47, 101, 136, .38),
+      0 3px 0 rgba(35, 77, 107, .35),
+      inset 0 2px 2px rgba(255, 255, 255, .55),
+      inset 0 -3px 6px rgba(18, 56, 82, .30);
+  }
+  .btn-nurse-role:active {
+    transform: translateY(3px);
+    border-bottom-width: 1px;
+    box-shadow:
+      inset 4px 5px 10px rgba(18, 56, 82, .40),
+      inset -2px -2px 6px rgba(255, 255, 255, .22);
+  }
+  .btn-nurse-role:active::before { opacity: 0; }
+
+  .role-meta {
+    margin: 12px 2px 0;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .02em;
+    color: var(--text-faint);
+    text-shadow: 0 1px 0 rgba(255,255,255,.7);
+  }
+
+  /* Nurse join form inside the card */
+  .nurse-join-form { display: grid; gap: 10px; margin-bottom: 8px; }
+  .join-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin: 0 2px 5px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.8);
+  }
+  .join-field label .req { color: var(--nurse-deep); }
+  .join-field label .opt {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 600;
+    color: var(--text-faint);
+  }
+  .join-field input {
+    width: 100%;
+    background: #e9e7e1;
+    border: 1.5px solid rgba(255, 255, 255, .85);
+    border-radius: 15px;
+    padding: 12px 16px;
+    font-size: 15.5px;
+    font-weight: 600;
+    color: var(--text);
+    box-shadow: var(--well-shadow);
+    transition: box-shadow .15s ease, border-color .15s ease;
+  }
+  .join-field input:focus {
+    outline: none;
+    border-color: var(--nurse);
+    box-shadow: var(--well-shadow), 0 0 0 3px rgba(63, 127, 167, .18);
+  }
+  .join-field input::placeholder { color: var(--text-faint); font-weight: 500; }
+  .join-error {
+    color: #a63a3a;
+    background: linear-gradient(145deg, #fbe7e7, #f6d9d9);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 12px;
+    padding: 9px 13px;
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: var(--well-shadow);
+  }
+
+  /* ---------- Footer as clay bar ---------- */
+  .chooser-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    border-radius: 22px;
+    background: linear-gradient(175deg, #fbfaf7, #efede7);
+    border: 1.5px solid rgba(255, 255, 255, .9);
+    box-shadow:
+      10px 12px 26px rgba(98, 106, 108, .14),
+      -8px -8px 20px rgba(255, 255, 255, .9),
+      inset 1px 1px 3px rgba(255,255,255,.9),
+      inset -3px -4px 8px rgba(96,100,110,.08);
+    font-size: 13.5px;
+    color: var(--text-soft);
+    animation: rise .55s .14s cubic-bezier(.2, .9, .3, 1.1) both;
+    margin-top: auto;
+  }
+  .chooser-footer .brand-line {
+    font-weight: 800;
+    letter-spacing: .03em;
+    color: var(--text);
+    font-size: 13px;
+    text-shadow: 0 1px 0 rgba(255,255,255,.8);
+  }
+  .footer-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .footer-link {
+    color: var(--text-soft);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1.5px solid rgba(255, 255, 255, .85);
+    box-shadow:
+      4px 5px 10px rgba(98, 106, 108, .13),
+      -3px -3px 8px rgba(255, 255, 255, .85),
+      inset 1px 1px 2px rgba(255, 255, 255, .85);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform .15s ease, box-shadow .15s ease, color .15s ease, background .15s ease;
+  }
+  .footer-link:hover {
+    color: var(--text);
+    background: #fff;
+    transform: translateY(-1.5px);
+    box-shadow:
+      6px 7px 13px rgba(98, 106, 108, .16),
+      -3px -3px 8px rgba(255, 255, 255, .9),
+      inset 1px 1px 2px rgba(255, 255, 255, .9);
+  }
+  .footer-link:active {
+    transform: translateY(1px);
+    box-shadow:
+      inset 2px 3px 6px rgba(98, 106, 108, .16),
+      inset -1px -1px 4px rgba(255, 255, 255, .85);
+  }
+  .footer-link:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Entrance ---------- */
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(18px) scale(.975); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ---------- Responsive: stack cards on narrow screens ---------- */
+  @media (max-width: 860px) {
+    .roles-grid {
+      grid-template-columns: minmax(0, 560px);
+      justify-content: center;
+      gap: 22px;
+    }
+  }
+  @media (max-width: 560px) {
+    .chooser-wrap {
+      padding: calc(14px + var(--safe-t)) 14px calc(18px + var(--safe-b));
+    }
+    .brand-badge { padding: 8px 18px 8px 8px; gap: 10px; }
+    .brand-mark-lg { width: 40px; height: 40px; border-radius: 14px; }
+    .roles-grid { gap: 18px; margin-bottom: 20px; }  .role-card {
+    padding: 28px 18px 18px;
+    border-radius: 24px;
+      box-shadow:
+        10px 14px 28px rgba(98, 106, 108, .16),
+        -8px -8px 20px rgba(255, 255, 255, .92),
+        inset 1px 1px 3px rgba(255, 255, 255, .95),
+        inset -3px -4px 8px rgba(96, 100, 110, .10);
+    }
+    .role-card::before { left: 20px; right: 20px; top: 11px; }
+    .role-card h2 {
+      font-size: clamp(20px, 6vw, 23px);
+      margin-bottom: 6px;
+    }
+    .role-card p.desc {
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+    .role-icon-circle {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 12px;
+      border-radius: 18px;
+    }
+    .role-step { width: 34px; height: 34px; }
+    .feature-list { border-radius: 16px; padding: 10px 12px; margin-bottom: 16px; }
+    .role-card .feature-item { font-size: 13.4px; }
+    .btn-role {
+      padding: 13px 14px;
+      min-height: 54px;
+      font-size: clamp(14.5px, 4vw, 16px);
+      border-radius: 16px;
+    }
+    .chooser-footer {
+      flex-direction: column;
+      align-items: stretch;
+      text-align: center;
+      gap: 10px;
+      border-radius: 20px;
+    }
+    .chooser-footer .brand-line { text-align: center; }
+    .footer-links {
+      justify-content: stretch;
+      width: 100%;
+      gap: 8px;
+      flex-direction: column;
+    }
+    .footer-link {
+      width: 100%;
+      justify-content: center;
+      padding: 11px 12px;
+      font-size: 13px;
+      min-height: 44px;
+    }
+    .bg-decor .blob { filter: blur(60px); opacity: .85; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+    }
+  }
+</style>
+<script type="module">
+  import { startTilt } from "/js/lib/tilt3d.js";
+  import { removeSplash, withButtonLoading } from "/js/lib/feedback.js";
+  import { startAmbient } from "/js/lib/ambient.js";
+  startTilt();
+  startAmbient();
+
+  // Nurse role: hand the name/unit the nurse just typed to the dashboard.
+  // It lands pre-filled on the dashboard's sign-in form, so the last step
+  // is just pressing "Sign In & Open Dashboard".
+  const form = document.getElementById("nurseJoinForm");
+  if (form) {
+    const nameIn = document.getElementById("inNurseNameChoose");
+    const unitIn = document.getElementById("inNurseUnitChoose");
+    const err = document.getElementById("errNurseChoose");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = nameIn.value.trim();
+      if (!name) {
+        err.textContent = "Please enter your name so requests can be acknowledged in your name.";
+        err.classList.remove("hidden");
+        nameIn.focus();
+        return;
+      }
+      try {
+        sessionStorage.setItem("it_nurse_join", JSON.stringify({ name, unit: unitIn.value.trim() }));
+      } catch { /* private mode: dashboard will ask again */ }
+      withButtonLoading(form.querySelector(".btn-nurse-role"), new Promise((res) => {
+        window.location.href = "/nurse";
+        setTimeout(res, 4000); // safety: restore the button if navigation stalls
+      }), "Opening dashboard…");
+    });
+  }
+
+  // Boot complete: drop the splash screen.
+  document.documentElement.classList.add("app-booting");
+  removeSplash();
+  document.querySelectorAll(".chooser-wrap").forEach((el) => el.classList.add("app-fade"));
+  requestAnimationFrame(() => document.documentElement.classList.remove("app-booting"));
+</script>
+</head>
+<body>
+
+<!-- Splash: paints before JS, removed by lib/feedback.js once the app boots -->
+<div class="app-splash" id="splash" aria-hidden="true">
+  <div class="app-splash-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="8" x2="6" y2="16"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="18" y1="9" x2="18" y2="15"/></svg>
+  </div>
+  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
+</div>
+
+<div class="bg-decor" aria-hidden="true">
+  <span class="blob blob-a"></span>
+  <span class="blob blob-b"></span>
+  <span class="blob blob-c"></span>
+  <span class="dots"></span>
+</div>
+
+<div class="chooser-wrap">
+  <header class="chooser-header">
+    <div class="brand-badge">
+      <div class="brand-mark-lg" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="6" y1="8" x2="6" y2="16"></line>
+          <line x1="12" y1="4" x2="12" y2="20"></line>
+          <line x1="18" y1="9" x2="18" y2="15"></line>
+        </svg>
+      </div>
+      <h1>INTUBATALK</h1>
+    </div>
+    <p class="tag">Speak without a voice. Touch, spell, blink, alert.</p>
+    <p class="sub"><span class="pulse-dot" aria-hidden="true"></span>Select your role to get started</p>
+  </header>
+
+  <main class="roles-grid">
+    <!-- Patient Card -->
+    <article class="role-card patient-card" data-tilt>
+      <div>
+        <div class="role-top">
+          <span class="role-badge badge-patient">Bedside Patient</span>
+          <span class="role-step" aria-hidden="true">01</span>
+        </div>
+        <div class="role-icon-circle icon-circle-patient" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 15h16a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1z"></path>
+            <path d="M6 15V7a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8"></path>
+            <path d="M9 8h4"></path>
+          </svg>
+        </div>
+        <h2>For the Patient</h2>
+        <p class="desc">A bedside tablet for intubated or non-verbal ICU patients to communicate without a voice.</p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="check check-patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>One-tap needs: Breathing, Suction, Pain, Thirst</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Visual 0 to 10 pain rating scale</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Nurse-assisted eye-blink yes/no protocol</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Alphabet speller pad and emergency alert</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <a href="/?fresh=1" class="btn-role btn-patient-role">
+          <span>Start as the Patient</span>
+          <span class="btn-arrow"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+        </a>
+        <p class="role-meta">No login · Bedside tablet mode</p>
+      </div>
+      <span class="clay-base" aria-hidden="true"></span>
+    </article>
+
+    <!-- Nurse Card -->
+    <article class="role-card nurse-card" data-tilt>
+      <div>
+        <div class="role-top">
+          <span class="role-badge badge-nurse">Nurse Station</span>
+          <span class="role-step" aria-hidden="true">02</span>
+        </div>
+        <div class="role-icon-circle icon-circle-nurse" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"></path>
+            <path d="M6 21v-2a6 6 0 0 1 12 0v2"></path>
+            <path d="M11 7h2M12 6v2"></path>
+          </svg>
+        </div>
+        <h2>For the Nurse</h2>
+        <p class="desc">A bedside station for nurses, doctors, and ICU staff to monitor several beds and respond quickly.</p>
+
+        <div class="feature-list">
+          <div class="feature-item">
+            <span class="check check-nurse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Personal nurse station with profile switcher</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-nurse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Multi-bed monitor for several rooms at once</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-nurse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Instant acknowledge with your name attached</span>
+          </div>
+          <div class="feature-item">
+            <span class="check check-nurse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+            <span>Repeating sirens and read-aloud speaker</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <form class="nurse-join-form" id="nurseJoinForm" novalidate>
+          <div class="join-field">
+            <label for="inNurseNameChoose">Your name <span class="req" aria-hidden="true">*</span></label>
+            <input id="inNurseNameChoose" autocomplete="name" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40">
+          </div>
+          <div class="join-field">
+            <label for="inNurseUnitChoose">Ward / pod <span class="opt">(optional)</span></label>
+            <input id="inNurseUnitChoose" placeholder="e.g. ICU Pod A" maxlength="40">
+          </div>
+          <div class="join-error hidden" id="errNurseChoose" role="alert"></div>
+          <button type="submit" class="btn-role btn-nurse-role">
+            <span>Sign in as the Nurse</span>
+            <span class="btn-arrow"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg></span>
+          </button>
+        </form>
+        <p class="role-meta">Your name shows on every acknowledgement</p>
+      </div>
+      <span class="clay-base" aria-hidden="true"></span>
+    </article>
+  </main>
+
+  <footer class="chooser-footer">
+    <span class="brand-line">INTUBATALK · ICU Clinical System</span>
+    <div class="footer-links">
+      <a href="/dual" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"></rect><path d="M8 21h8M12 17v4M12 3v14"></path></svg>
+        Dual Simulator (Split View)
+      </a>
+      <a href="/board" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M12 17v3M8 20h8"></path><path d="M7 8h7M7 11h10"></path></svg>
+        Printable Backup Board
+      </a>
+      <a href="/guidelines" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 16v-4M12 8h.01"></path></svg>
+        Usage Guidelines
+      </a>
+      <a href="/privacy" class="footer-link">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l7.5 3v5.5c0 4.8-3.2 7.5-7.5 9.5-4.3-2-7.5-4.7-7.5-9.5V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+        Privacy Policy
+      </a>
+      <button type="button" class="footer-link" onclick="window.print()">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 9V4h12v5"></path><rect x="3" y="9" width="18" height="7" rx="2"></rect><path d="M7 13h10v7H7z"></path></svg>
+        Print This Page
+      </button>
+    </div>
+  </footer>
+</div>
+
+</body>
+</html>

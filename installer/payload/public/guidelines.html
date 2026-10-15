@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<meta name="description" content="INTUBATALK usage guidelines: how to set up the bedside tablet, pair the nurse dashboard, run the eye-blink protocol safely, and when to rely on the laminated backup board.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Usage Guidelines</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  .doc-wrap { max-width: 800px; margin: 0 auto; padding: 0 20px 60px; position: relative; z-index: 1; }
+  .doc-header { text-align: center; margin: 26px 0; }
+  .doc-badge {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 9px 22px 9px 10px; border-radius: 999px;
+    background: linear-gradient(175deg, #fdfcfb, #f1efe9);
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow: var(--clay-sm); margin-bottom: 14px;
+  }
+  .doc-badge .brand-mark { width: 42px; height: 42px; border-radius: 14px; }
+  .doc-badge h1 { font-family: var(--font-display); font-size: 17px; letter-spacing: .06em; color: var(--text); margin: 0; font-weight: 700; }
+  .doc-header h2 { font-family: var(--font-display); font-size: clamp(28px, 6vw, 38px); font-weight: 700; margin: 0 0 8px; }
+  .doc-header p { color: var(--text-soft); margin: 0; font-size: 15px; line-height: 1.55; }
+
+  .step-card {
+    background: var(--surface); border-radius: var(--radius-xl);
+    box-shadow: var(--clay-shadow); border: 1px solid rgba(255,255,255,.65);
+    padding: 24px 26px 12px; margin-bottom: 20px; position: relative; overflow: hidden;
+    animation: risein .5s cubic-bezier(.2, .9, .3, 1.08) backwards;
+    animation-delay: var(--d, 0ms);
+  }
+  @keyframes risein { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .step-num {
+    position: absolute; top: 18px; right: 22px;
+    font-family: var(--font-display); font-size: 40px; font-weight: 700;
+    color: rgba(63,167,150,.18); line-height: 1;
+  }
+  .step-card h3 { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0 0 12px; }
+  .step-card h3 .ic { width: 22px; height: 22px; color: var(--accent-deep); flex-shrink: 0; }
+  .step-card p, .step-card li { color: var(--text-soft); font-size: 14.8px; line-height: 1.65; }
+  .step-card p { margin: 0 0 12px; }
+  .step-card ol, .step-card ul { margin: 0 0 12px; padding-left: 20px; }
+  .step-card li { margin-bottom: 7px; }
+  .step-card b { color: var(--text); }
+  .caution {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--warn-soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px;
+    font-size: 13.8px; font-weight: 600; color: #7a5417; line-height: 1.5;
+  }
+  .caution .ic { width: 20px; height: 20px; flex-shrink: 0; color: var(--warn); }
+  .quick-ref {
+    background: linear-gradient(175deg, #fbfaf7, #efede7);
+    border-radius: var(--radius-xl); box-shadow: var(--clay-shadow);
+    border: 1px solid rgba(255,255,255,.9); padding: 24px 26px 16px; margin: 26px 0;
+  }
+  .quick-ref h3 { font-family: var(--font-display); font-size: 20px; margin: 0 0 14px; }
+  .qr-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+  @media (max-width: 640px) { .qr-grid { grid-template-columns: 1fr; } }
+  .qr-item { background: var(--surface-2); border-radius: 16px; padding: 12px 14px; box-shadow: var(--well-sm, var(--clay-sm)); font-size: 13.5px; color: var(--text-soft); line-height: 1.5; }
+  .qr-item b { color: var(--text); display: block; margin-bottom: 3px; font-size: 14px; }
+  .doc-back-bar { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+  @media (max-width: 560px) {
+    .step-card { padding: 20px 16px 8px; border-radius: 22px; } .step-num { font-size: 32px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-wrap">
+  <header class="doc-header">
+    <div class="doc-badge">
+      <div class="brand-mark" id="docMark" role="img" aria-label="INTUBATALK logo"></div>
+      <h1>INTUBATALK · ICU CLINICAL SYSTEM</h1>
+    </div>
+    <h2>Usage Guidelines</h2>
+    <p>Set-up, pairing, and safe day-to-day use for the patient tablet and the nurse dashboard.</p>
+  </header>
+
+  <article>
+    <section class="step-card" style="--d:0ms">
+      <span class="step-num" aria-hidden="true">01</span>
+      <h3><span data-ic="position"></span>Set up the bedside tablet</h3>
+      <ol>
+        <li>Open the <b>patient tablet</b> page and enter the patient's name (bed number is optional).</li>
+        <li>A <b>four-digit room code</b> appears in the top bar. Write it where the care team can see it.</li>
+        <li>Prop the tablet where the patient can reach and see it, with the screen brightness up.</li>
+        <li>Open <b>Abilities</b> and mark what the patient can do today — the tiles adapt to that profile.</li>
+      </ol>
+      <p>A fresh session starts every time the tablet page is opened, so re-admission to a new bed always creates a new code.</p>
+    </section>
+
+    <section class="step-card" style="--d:.06s">
+      <span class="step-num" aria-hidden="true">02</span>
+      <h3><span data-ic="nurse"></span>Set up the nurse dashboard</h3>
+      <ol>
+        <li>Open the <b>nurse dashboard</b> and sign in with your name — it is attached to every acknowledgement.</li>
+        <li>Tap <b>Add Patient</b> to connect one or many beds at once: paste several room codes separated by commas, or create new patients by name and give each generated code to its bedside tablet.</li>
+        <li>Filter the feed by bed or by urgency; emergency alarms interrupt with a full-screen siren until acknowledged.</li>
+        <li>Use <b>Test</b> to check the chime and the spoken read-aloud during shift handover.</li>
+      </ol>
+    </section>
+
+    <section class="step-card" style="--d:.12s">
+      <span class="step-num" aria-hidden="true">03</span>
+      <h3><span data-ic="blink"></span>Eye-blink protocol</h3>
+      <ol>
+        <li>Establish a clear convention aloud first: <b>one blink = yes, two blinks = no</b>.</li>
+        <li>Ask one question at a time and wait at least five seconds for an answer.</li>
+        <li>Optionally enable the <b>camera assist</b> on the blink panel, so the nurse can watch the patient's eyes from the tablet screen. The camera is only used if permission is granted, and the video never leaves the device.</li>
+        <li>Record the answer with the YES / NO buttons — the tablet relays and speaks it to the dashboard.</li>
+      </ol>
+      <div class="caution">
+        <span data-ic="shield"></span>
+        <span>Never use the blink answer alone for decisions about pain, sedation, or withdrawal of care. Confirm with a full clinical assessment.</span>
+      </div>
+    </section>
+
+    <section class="step-card" style="--d:.18s">
+      <span class="step-num" aria-hidden="true">04</span>
+      <h3><span data-ic="emergency"></span>Emergencies and alarms</h3>
+      <ul>
+        <li>The red <b>Emergency</b> tile flashes the screen, rings a repeating siren on the dashboard, and vibrates — it repeats until a nurse acknowledges.</li>
+        <li>Suction, breathing, toilet and pain ≥7 are high-priority: they pulse the feed card and are spoken aloud.</li>
+        <li>When the patient recovers, they tap <b>“I am okay now”</b> which cancels the alarm on both sides.</li>
+        <li>If the tablet is offline or muffled, the hand-cued laminated board is the backup — keep it within the patient's sight line.</li>
+      </ul>
+    </section>
+
+    <section class="step-card" style="--d:.24s">
+      <span class="step-num" aria-hidden="true">05</span>
+      <h3><span data-ic="write"></span>Hygiene, privacy and care limits</h3>
+      <ul>
+        <li>Wipe the tablet and laminated board with hospital-approved disinfectant wipes between patients.</li>
+        <li>Sign out and clear the session when the bed changes; the dashboard caches the patient list on the nurse device only.</li>
+        <li>INTUBATALK relays requests — it does not replace continuous ECG monitoring, call bells, or a bedside-sitting nurse when clinically needed.</li>
+        <li>Speak with the patient, not about them: the tablet's voice is the patient's voiceBOX, so acknowledge at the bedside.</li>
+      </ul>
+    </section>
+
+    <section class="step-card" style="--d:.3s">
+      <span class="step-num" aria-hidden="true">06</span>
+      <h3><span data-ic="board"></span>Downtime and the laminated board</h3>
+      <p>If Wi-Fi, the tablet, or the dashboard is unavailable, switch to the printable backup board:</p>
+      <ol>
+        <li>Print the board in A4 landscape from the <b>Backup board</b> page and laminate it.</li>
+        <li>Point at a tile to communicate; for emergencies, keep pointing until a nurse arrives.</li>
+        <li>Prop it where the same position is used on the tablet, so the mapping is identical.</li>
+      </ol>
+    </section>
+  </article>
+
+  <section class="quick-ref">
+    <h3>Quick reference</h3>
+    <div class="qr-grid">
+      <div class="qr-item"><b>One tap</b> = one request. Thirst, reposition, nausea, anxiety send instantly.</div>
+      <div class="qr-item"><b>Four tiles</b> open a phrase picker: breathing, suction, toilet, and the 0–10 pain scale.</div>
+      <div class="qr-item"><b>1 blink / 2 blinks</b> = yes / no. Confirm the convention aloud each shift.</div>
+      <div class="qr-item"><b>Red card</b> = emergency. It repeats until acknowledged.</div>
+      <div class="qr-item"><b>Add Patient</b> = paste one code, or many, or create patients and hand out codes.</div>
+      <div class="qr-item"><b>Start over</b> on the tablet wipes the session between beds.</div>
+    </div>
+  </section>
+
+  <div class="doc-back-bar">
+    <a class="btn" href="/choose">Back to role chooser</a>
+    <a class="btn btn-mint" href="/">Patient tablet</a>
+    <a class="btn" href="/nurse">Nurse dashboard</a>
+  </div>
+</div>
+
+<script type="module">
+import { svg } from "/js/lib/icons.js";
+import { startAmbient } from "/js/lib/ambient.js";
+import { $, $$ } from "/js/lib/util.js";
+
+$("#docMark") && ($("#docMark").innerHTML = svg("voice"));
+$$("[data-ic]").forEach((el) => { if (el instanceof HTMLElement) el.innerHTML = svg(el.dataset.ic); });
+startAmbient();
+
+// Enhanced 3D background initialization
+document.documentElement.classList.add("ambient-3d-enabled");
+</script>
+</body>
+</html>

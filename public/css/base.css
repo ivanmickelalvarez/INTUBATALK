@@ -25,15 +25,15 @@
 
 /* Ambient background planes container */
 .ambient-plane-container {
-  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
   transform-style: preserve-3d; overflow: hidden;
-  background: var(--bg);
+  background: transparent;
 }
 
 /* Individual 3D planes */
 .ambient-plane {
   position: absolute; border-radius: 50%; filter: blur(80px);
-  width: 300%; height: 300%;
+  width: 140vmax; height: 140vmax;
   left: 50%; top: 50%; transform: translate(-50%, -50%);
   animation: orbit 20s ease-in-out infinite;
   will-change: transform;
@@ -186,6 +186,7 @@ img, svg { display: block; max-width: 100%; }
   box-shadow: var(--clay-sm);
   border: 1px solid rgba(255, 255, 255, 0.65);
   color: var(--text);
+  white-space: nowrap;
   transition: transform .1s ease, box-shadow .15s ease, background .15s ease;
   user-select: none; -webkit-user-select: none;
 }
@@ -283,6 +284,33 @@ dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px)
 
 /* ---------- Button loading spinner ---------- */
 .btn-spinner {
+  width: 16px; height: 16px; flex: none;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,.45);
+  border-top-color: #fff;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-busy-label { opacity: .95; }
+
+/* ---------- Connection banner (offline / reconnecting) ---------- */
+.conn-banner {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 80;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 9px 16px;
+  font-size: 13.5px; font-weight: 700;
+  color: #7a4d13;
+  background: linear-gradient(145deg, #f9ecd2, #f4e2bd);
+  border-bottom: 1px solid rgba(255,255,255,.7);
+  box-shadow: 0 6px 18px rgba(103,112,108,.14);
+  animation: toastin .3s ease;
+}
+.conn-banner[data-state="offline"] { color: #8c3030; background: linear-gradient(145deg, #fbe4e4, #f7d6d6); }
+.conn-banner-icon { width: 15px; height: 15px; flex: none; }
+.conn-banner--leaving { opacity: 0; transition: opacity .3s ease; }
 
 /* ---------- App splash / loading screen ---------- */
 .app-splash {

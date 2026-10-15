@@ -6,8 +6,13 @@
 // Usage: auto-inits on import for [data-tilt] elements; call Tilt.attach(el)
 // for dynamically rendered cards.
 
-const reduced = () =>
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+const reduced = () => {
+  // Mirror ambient.js: ?motion=full forces the 3D tilt on for testing/kiosks.
+  try {
+    if (new URLSearchParams(location.search).get("motion") === "full") return false;
+  } catch { /* keep default behavior */ }
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+};
 
 const MAX_YAW = 7;   // degrees of horizontal lean
 const MAX_PITCH = 9; // degrees of vertical lean

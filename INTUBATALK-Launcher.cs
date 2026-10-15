@@ -22,8 +22,8 @@ using System.Reflection;
 [assembly: AssemblyTitle("INTUBATALK")]
 [assembly: AssemblyDescription("Adaptive communication system for intubated ICU patients. Desktop hub with patient tablet, nurse dashboard, dual simulator and printable backup board.")]
 [assembly: AssemblyProduct("INTUBATALK ICU System")]
-[assembly: AssemblyVersion("2.0.0.0")]
-[assembly: AssemblyFileVersion("2.0.0.0")]
+[assembly: AssemblyVersion("2.2.0.0")]
+[assembly: AssemblyFileVersion("2.2.0.0")]
 
 namespace IntubaTalk
 {
@@ -322,9 +322,14 @@ namespace IntubaTalk
             }
 
             // ── 7. RECESSED CLAY WELL FOR FEATURES ──
+            // The well hugs its content instead of stretching to the button,
+            // so tall cards don't show a large dead area under the last item.
             int featBoxY = descY + 40;
-            int maxFeatH = (_ctaBtn != null) ? Math.Max(110, _ctaBtn.Top - featBoxY - 14) : 145;
-            int featBoxH = maxFeatH;
+            int availH = (_ctaBtn != null) ? Math.Max(110, _ctaBtn.Top - featBoxY - 14) : 145;
+            int neededH = (BulletPoints == null || BulletPoints.Length == 0)
+                ? 60
+                : 20 + Math.Min(30, (availH - 20) / BulletPoints.Length) * BulletPoints.Length;
+            int featBoxH = Math.Min(availH, Math.Max(96, neededH + 14));
             Rectangle featBox = new Rectangle(textX, featBoxY, cardBody.Width - 44, featBoxH);
 
             using (GraphicsPath fbp = GetRoundedPath(featBox, 16))
@@ -424,15 +429,41 @@ namespace IntubaTalk
         protected override void OnMouseDown(MouseEventArgs e) { _pressed = true; Invalidate(); base.OnMouseDown(e); }
         protected override void OnMouseUp(MouseEventArgs e) { _pressed = false; Invalidate(); base.OnMouseUp(e); }
 
+        private int _lastRadius = -1;
+
+        // Clip the control window to its rounded shape so the parent card's
+        // painting shows around the corners — fixes the black corners that
+        // appeared when the button cleared its own surface with the parent's
+        // transparent BackColor.
+        private void ApplyRoundedRegion()
+        {
+            if (_lastRadius == Radius && Region != null) return;
+            _lastRadius = Radius;
+            Rectangle rr = new Rectangle(0, 0, Width, Height);
+            GraphicsPath gp = GetRoundedPath(rr, Radius);
+            Region old = Region;
+            Region = new Region(gp);
+            gp.Dispose();
+            if (old != null) old.Dispose();
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            _lastRadius = -1;
+            ApplyRoundedRegion();
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
+            ApplyRoundedRegion();
+
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-            g.Clear(Parent != null ? Parent.BackColor : Color.Transparent);
 
             int yOffset = _pressed ? 2 : 0;
-            Rectangle r = new Rectangle(0, yOffset, Width - 1, Height - 1 - yOffset);
+            Rectangle r = new Rectangle(0, 1, Width - 2, Height - 3 - yOffset);
 
             // Button drop shadow (only when unpressed)
             if (!_pressed)
@@ -508,7 +539,6 @@ namespace IntubaTalk
             Graphics g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-            g.Clear(Parent != null ? Parent.BackColor : colSurface);
 
             Rectangle r = new Rectangle(1, 1, Width - 3, Height - 3);
             GraphicsPath gp = new GraphicsPath();
@@ -604,7 +634,7 @@ namespace IntubaTalk
 
         private void InitUI()
         {
-            this.Text = "INTUBATALK v2 · Choose Your Role";
+            this.Text = "INTUBATALK v2.1 · Choose Your Role";
             this.Size = new Size(960, 740);
             this.MinimumSize = new Size(880, 680);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -639,11 +669,6 @@ namespace IntubaTalk
                 else if (ke.KeyCode == Keys.D4 || ke.KeyCode == Keys.B || ke.KeyCode == Keys.NumPad4)
                 {
                     LaunchApp("/board");
-                    ke.Handled = true;
-                }
-                else if (ke.KeyCode == Keys.W)
-                {
-                    LaunchApp("/choose");
                     ke.Handled = true;
                 }
                 else if (ke.KeyCode == Keys.F1 || ke.KeyCode == Keys.H)
@@ -748,16 +773,6 @@ namespace IntubaTalk
                 Location = new Point(94, 52)
             };
 
-            Label lblPrompt = new Label
-            {
-                Text = "Select your role to get started:",
-                Font = new Font("Segoe UI", 10f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(120, 130, 140),
-                AutoSize = true,
-                BackColor = colSurface,
-                Location = new Point(94, 79)
-            };
-
             lblStatus = new Label
             {
                 Text = "● Checking server...",
@@ -771,7 +786,6 @@ namespace IntubaTalk
 
             pnlHeader.Controls.Add(lblTitle);
             pnlHeader.Controls.Add(lblTagline);
-            pnlHeader.Controls.Add(lblPrompt);
             pnlHeader.Controls.Add(lblStatus);
             this.Controls.Add(pnlHeader);
 
@@ -867,8 +881,6 @@ namespace IntubaTalk
                 BackColor = colSurface
             };
 
-            ClayPillButton btnWeb = new ClayPillButton { Text = "✨ Web View", Width = 130 };
-            btnWeb.Click += delegate { LaunchApp("/choose"); };
             ClayPillButton btnDual = new ClayPillButton { Text = "👥 Dual Simulator", Width = 140 };
             btnDual.Click += delegate { LaunchApp("/dual"); };
             ClayPillButton btnBoard = new ClayPillButton { Text = "📋 Backup Board", Width = 130 };
@@ -876,7 +888,6 @@ namespace IntubaTalk
             ClayPillButton btnWifi = new ClayPillButton { Text = "🌐 Wi-Fi Link", Width = 115 };
             btnWifi.Click += delegate { CopyLanUrl(); };
 
-            flowLeft.Controls.Add(btnWeb);
             flowLeft.Controls.Add(btnDual);
             flowLeft.Controls.Add(btnBoard);
             flowLeft.Controls.Add(btnWifi);
@@ -892,12 +903,9 @@ namespace IntubaTalk
 
             ClayPillButton btnHelp = new ClayPillButton { Text = "❓ How It Works", Width = 125 };
             btnHelp.Click += delegate { ShowHelp(); };
-            ClayPillButton btnPrivacy = new ClayPillButton { Text = "🔒 Privacy", Width = 95 };
-            btnPrivacy.Click += delegate { LaunchApp("/privacy"); };
             ClayPillButton btnRestart = new ClayPillButton { Text = "🔄 Restart Server", Width = 125 };
             btnRestart.Click += delegate { RestartServer(); };
 
-            flowRight.Controls.Add(btnPrivacy);
             flowRight.Controls.Add(btnHelp);
             flowRight.Controls.Add(btnRestart);
 
@@ -954,14 +962,18 @@ namespace IntubaTalk
                 return;
             }
 
+            // Prefer a Node runtime bundled next to the app (runtime\node.exe from
+            // the installer) so the app runs on machines without Node preinstalled.
             string serverJs = Path.Combine(appDir, "server.js");
             if (File.Exists(serverJs))
             {
+                string bundledNode = Path.Combine(appDir, "runtime", "node.exe");
+                string nodeExe = File.Exists(bundledNode) ? bundledNode : "node";
                 try
                 {
                     ProcessStartInfo psi = new ProcessStartInfo
                     {
-                        FileName = "node",
+                        FileName = nodeExe,
                         Arguments = "\"" + serverJs + "\"",
                         WorkingDirectory = appDir,
                         CreateNoWindow = true,
@@ -1111,8 +1123,9 @@ namespace IntubaTalk
                 "   Presents both Patient and Nurse screens side-by-side on this display.\n\n" +
                 "4. Printable Board:\n" +
                 "   Generates a clean, laminatable communication chart as a paper backup.\n\n" +
+                "Keyboard shortcuts: 1/P = Patient, 2/N = Nurse, 3/D = Dual, 4/B = Board, F1/H = Help.\n\n" +
                 "Privacy: nothing leaves this device except on your Wi-Fi; no data is\n" +
-                "ever recorded, tracked, or sold. See the Privacy button for details.",
+                "ever recorded, tracked, or sold.",
                 "INTUBATALK Guide",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

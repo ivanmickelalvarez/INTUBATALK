@@ -5,6 +5,7 @@ import * as audio from "./lib/audio.js";
 import { speak, stopSpeech } from "./lib/tts.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
+import { attach as attachTilt } from "./lib/tilt3d.js";
 import * as sync from "./lib/sync.js";
 import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS } from "./needs.js";
@@ -88,36 +89,47 @@ function persistActiveNurse() {
   }
 }
 
-// Remove a nurse profile from the saved list
-function removeNurse(nurseId) {
-  if (!confirm(`Remove this nurse profile from the dashboard?\n\nThis will unsign this nurse from the dashboard. The nurse's data will be cleared from this device, but no data is sent anywhere or recorded.`)) return;
+// Clear all locally stored data for one nurse profile (never sent anywhere).
+function purgeNurseData(nurseId) {
+  try {
+    localStorage.removeItem(LS_FEED_PREFIX + nurseId);
+    localStorage.removeItem(LS_PATIENTS_PREFIX + nurseId);
+  } catch { /* private mode */ }
+}
+
+// Log out a nurse: their session ends AND their station is removed from the
+// "Existing Nurse Stations" list on the sign-in screen, as requested.
+function logoutNurse(nurseId) {
+  const wasActive = activeNurseId === nurseId;
   nurses = nurses.filter((n) => n.id !== nurseId);
   saveNursesList();
-  if (activeNurseId === nurseId) {
+  purgeNurseData(nurseId);
+  if (wasActive) {
     localStorage.removeItem(LS_ACTIVE_NURSE);
     activeNurseId = null;
     currentNurse = null;
     rooms = [];
     feed = [];
+    patients = {};
+    patientFilter = "all";
+    currentFilter = "all";
+    sync.attachRooms([]);
     renderJoin();
-  } else {
-    selectNurse(nurses[0]?.id || null);
+    toastToast("Logged out — station removed from this device.");
+  } else if (currentNurse) {
+    toastToast("End station removed.");
   }
 }
 
-// Log out the current nurse (keeps profile in saved list, just clears active session)
-function logoutNurse(nurseId) {
-  localStorage.removeItem(LS_ACTIVE_NURSE);
-  activeNurseId = null;
-  currentNurse = null;
-  rooms = [];
-  feed = [];
-  patients = {};
-  persistPatients();
-  sync.attachRooms([]);
-  updateTopBar();
-  renderJoin();
-  toastToast("Logged out from nurse station.");
+// Remove a nurse profile from the saved list
+function removeNurse(nurseId) {
+  const target = nurses.find((n) => n.id === nurseId);
+  const name = target ? target.name : "this nurse";
+  if (!confirm(`Remove ${name}'s station from this device?\n\nThis logs the nurse out and removes their station from the "Existing Nurse Stations" list. Their data is cleared from this device, but no data is sent anywhere or recorded.`)) return;
+  logoutNurse(nurseId);
+  if (activeNurseId === nurseId) return; // logoutNurse already re-rendered
+  if (nurses.length) selectNurse(nurses[0].id);
+  else renderJoin();
 }
 
 function selectNurse(nurseId) {
@@ -223,21 +235,24 @@ function renderJoin() {
       <form id="formNewNurse" style="display:grid;gap:14px" novalidate>
         <div>
           <label for="inNurseName" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Nurse Name (required)</label>
-          <input id="inNurseName" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40" autocomplete="name" value="${esc(joinName)}">
+          <input id="inNurseName" placeholder="e.g. Sarah Jenkins, RN" required maxlength="40" autocomplete="name" value="${esc(joinName)}">
         </div>
         <div>
           <label for="inNurseUnit" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Ward / Pod (Optional)</label>
-          <input id="inNurseUnit" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;width:100%;letter-spacing:normal;text-transform:none;text-align:left" placeholder="e.g. ICU Pod A" maxlength="40" value="${esc(joinUnit)}">
+          <input id="inNurseUnit" placeholder="e.g. ICU Pod A" maxlength="40" value="${esc(joinUnit)}">
         </div>
         <div>
           <label for="inInitialRooms" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Bedside Room Code(s) <span style="font-weight:500">(Optional, comma-separated)</span></label>
-          <input id="inInitialRooms" class="alph-out" style="min-height:auto;padding:12px 16px;font-size:16px;letter-spacing:2px;width:100%" placeholder="e.g. 1024, 2048">
+          <input id="inInitialRooms" placeholder="e.g. 1024, 2048" inputmode="numeric" autocomplete="off">
           <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button.</small>
         </div>
         <div class="join-err hidden" id="errJoin"></div>
         <button type="submit" class="btn btn-mint" style="padding:15px;font-size:17px;margin-top:4px">Sign In & Open Dashboard</button>
       </form>
     </section>`;
+
+  const joinCard = $(".join-card", $("#main"));
+  if (joinCard) attachTilt(joinCard, { max: 0.45 });
 
   $$(".nurse-profile-card", $("#main")).forEach((card) => {
     card.addEventListener("click", () => {
@@ -295,6 +310,9 @@ function updateTopBar() {
   chip.title = `Signed in as ${currentNurse.name} — click to switch nurse`;
   chip.style.cursor = "pointer";
   chip.onclick = () => openNurseProfileDialog();
+  chip.onkeydown = (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNurseProfileDialog(); }
+  };
 
   const count = rooms.length;
   $("#codeTag").innerHTML = count === 0
@@ -407,6 +425,7 @@ function renderPatientList() {
   }).join("");
 
   $$(".patient-card-item", el).forEach((card) => {
+    attachTilt(card, { max: 0.4 });
     card.addEventListener("click", (e) => {
       if (e.target.closest(".btn-rm-patient")) return;
       const r = card.dataset.room;
@@ -497,7 +516,7 @@ function cardFor(r) {
   const statusWord = r.status === "ack" ? " · acknowledged" : done ? " · handled" : "";
 
   return `
-    <article class="req ${emg ? "emg" : ""} ${!done && r.status === "new" && !emg ? "speaks" : ""} ${done ? "done" : ""}" data-cmid="${esc(r.cmid)}" data-room="${esc(r.room || "")}">
+    <article class="req ${emg ? "emg" : ""} ${!done && r.status === "new" && !emg ? "speaks" : ""} ${done ? "done" : ""}" data-cmid="${esc(r.cmid)}" data-room="${esc(r.room || "")}" data-tilt>
       <div class="stamp">${svg(iconName)}</div>
       <div class="bd">
         <div class="who">
@@ -547,15 +566,17 @@ function renderFeed() {
 
   $$("article[data-cmid]", el).forEach((card, i) => {
     card.style.setProperty("--d", `${Math.min(i, 8) * 50}ms`);
+    attachTilt(card, { max: 0.55 }); // pointer-driven 3D lean on request cards
   });
 
   $$("article[data-cmid] .acts button", el).forEach((b) => {
     b.addEventListener("click", (e) => {
-      const art = e.target.closest("article");
-      const cmid = art.dataset.cmid;
+      // e.target can be the svg inside the button — use currentTarget.
+      const art = e.currentTarget.closest("article");
+      const cmid = art?.dataset.cmid;
       const r = feed.find((x) => x.cmid === cmid);
       if (!r) return;
-      const act = e.target.dataset.act;
+      const act = e.currentTarget.dataset.act;
 
       if (act === "ack") {
         r.status = "ack";
@@ -853,7 +874,7 @@ function openNurseProfileDialog() {
       const nid = btn.dataset.nid;
       const target = nurses.find((n) => n.id === nid);
       const name = target ? target.name : "this nurse";
-      if (confirm(`Log out ${name} from the dashboard?`)) {
+      if (confirm(`Log out ${name}? Their station is removed from this device's "Existing Nurse Stations" list.`)) {
         logoutNurse(nid);
         dlg.close();
       }
@@ -862,7 +883,7 @@ function openNurseProfileDialog() {
   $$(".btn-remove-nurse", listEl).forEach((btn) => {
     btn.addEventListener("click", () => {
       removeNurse(btn.dataset.nid);
-      openNurseProfileDialog();
+      if (dlg.open) openNurseProfileDialog();
     });
   });
 
@@ -958,6 +979,7 @@ function refreshPatientStatusList() {
   };
 
   $$(".patient-status-item", list).forEach((item) => {
+    attachTilt(item, { max: 0.35 });
     item.addEventListener("click", (e) => {
       if (e.target.closest(".ps-rm")) return;
       focusRoom(item.dataset.room);
@@ -1261,7 +1283,7 @@ $("#btnAddPatient")?.addEventListener("click", openConnectDialog);
 $("#btnSwitchNurse")?.addEventListener("click", openNurseProfileDialog);
 $("#btnNurseLogout")?.addEventListener("click", () => {
   if (!currentNurse) return;
-  if (confirm(`Log out ${currentNurse.name} from the nurse dashboard?`)) {
+  if (confirm(`Log out ${currentNurse.name}? Their station is removed from this device's "Existing Nurse Stations" list.`)) {
     logoutNurse(currentNurse.id);
   }
 });

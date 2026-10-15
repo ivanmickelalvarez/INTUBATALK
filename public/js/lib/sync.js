@@ -5,12 +5,16 @@
 import { uid } from "./util.js";
 
 const LS_ROOM = "it_room";
+const LS_OUTBOX = "it_outbox";
 const handlers = { request: [], ack: [], clear: [], profile: [], profiles: [], connection: [] };
 let room = null;          // primary room code (for patient tablet)
 let rooms = [];           // array of room codes (for multi-patient nurse dashboard)
 let pollTimer = null;     // behind null until register/attach
 let after = 0;            // last server message id seen
 let seenCmids = new Set();
+let outbox = [];
+let outboxBusy = false;
+let outboxTimer = null;
 
 // ---- broadcast channel (single-browser demo) ------------------------------
 
@@ -22,12 +26,69 @@ try {
 
 const say = (msg) => { try { channelLocal?.postMessage(msg); } catch { /* noop */ } };
 
+try {
+  const saved = JSON.parse(localStorage.getItem(LS_OUTBOX) || "[]");
+  outbox = Array.isArray(saved) ? saved.slice(-100) : [];
+} catch { outbox = []; }
+
+const persistOutbox = () => {
+  try { localStorage.setItem(LS_OUTBOX, JSON.stringify(outbox.slice(-100))); } catch { /* private mode */ }
+};
+
+const notifyConnection = (ok) => reportConnection(ok);
+
 const post = (path, body) =>
   fetch(`/api${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  }).then((response) => {
+    if (!response.ok) throw new Error(`API ${response.status}`);
+    notifyConnection(true);
+    return response;
+  }).catch((error) => {
+    notifyConnection(false);
+    throw error;
   });
+
+const queuePost = (path, body, key = `${path}:${body.cmid || Date.now()}`) => {
+  const existing = outbox.find((item) => item.key === key);
+  if (existing) {
+    existing.body = body;
+    existing.next_ms = Math.min(existing.next_ms, Date.now());
+  } else {
+    outbox.push({ key, path, body, attempts: 0, next_ms: Date.now() });
+    persistOutbox();
+  }
+  persistOutbox();
+  flushOutbox();
+};
+
+async function flushOutbox() {
+  if (outboxBusy || !outbox.length) return;
+  outboxBusy = true;
+  try {
+    for (const item of [...outbox]) {
+      if (item.next_ms > Date.now()) continue;
+      try {
+        await post(item.path, item.body);
+        outbox = outbox.filter((candidate) => candidate.key !== item.key);
+        persistOutbox();
+      } catch {
+        item.attempts = Math.min((item.attempts || 0) + 1, 8);
+        item.next_ms = Date.now() + Math.min(30000, 1000 * (2 ** item.attempts));
+        persistOutbox();
+      }
+    }
+  } finally {
+    outboxBusy = false;
+    if (outbox.length) {
+      clearTimeout(outboxTimer);
+      const next = Math.max(500, Math.min(...outbox.map((item) => Math.max(0, item.next_ms - Date.now()))));
+      outboxTimer = setTimeout(flushOutbox, next);
+    }
+  }
+}
 
 // ---- room / registration ---------------------------------------------------
 
@@ -53,6 +114,7 @@ export const register = async ({ name, bed, forceNew = true }) => {
   } catch { /* private mode */ }
   startPolling();
   heartbeat();
+  queuePost("/profile", { room, name, bed, caps: profileCache().caps || [] }, `/profile:${room}`);
   return room;
 };
 
@@ -121,7 +183,7 @@ export function saveProfile(p) {
   profile = p;
   try { localStorage.setItem("it_profile", JSON.stringify(p)); } catch { /* full */ }
   if (room) {
-    post("/profile", { room, name: p.name, bed: p.bed, caps: p.caps || [] }).catch(() => {});
+    queuePost("/profile", { room, name: p.name, bed: p.bed, caps: p.caps || [] }, `/profile:${room}`);
   }
   say({ type: "profile", profile: p, ts: Date.now() });
 }
@@ -143,7 +205,7 @@ export function sendItem({ kind = "need", need = "message", label = "Message", m
     patientName: p.name, bed: p.bed, ts: Date.now(),
   };
   seenCmids.add(payload.cmid);
-  if (room) post("/messages", payload).catch(() => {});
+  if (room) queuePost("/messages", payload, `/messages:${payload.cmid}`);
   say(payload);
   return payload.cmid;
 }
@@ -158,13 +220,13 @@ export const sendEmergency = ({ msg = "I need help now." } = {}) =>
 
 export const sendAck = (cmid, targetRoom, nurseName) => {
   const r = targetRoom || room;
-  if (r) post("/ack", { room: r, cmid, nurse: nurseName || undefined }).catch(() => {});
+  if (r) queuePost("/ack", { room: r, cmid, nurse: nurseName || undefined }, `/ack:${r}:${cmid}`);
   say({ type: "ack", cmid, room: r, nurse: nurseName || null, ts: Date.now() });
 };
 
 export const sendClear = (cmid, targetRoom) => {
   const r = targetRoom || room;
-  if (r) post("/clear", { room: r, cmid }).catch(() => {});
+  if (r) queuePost("/clear", { room: r, cmid }, `/clear:${r}:${cmid || "room"}`);
   say({ type: "clear", cmid, room: r, ts: Date.now() });
 };
 
@@ -219,6 +281,7 @@ async function pollOnce() {
     }
     if (data.profiles) dispatch({ type: "profiles", profiles: data.profiles, ts: data.now });
     if (data.profile) dispatch({ type: "profile", profile: data.profile, caps: data.caps || [], ts: data.now });
+    flushOutbox();
   } catch { /* offline — keep trying */ reportConnection(false); }
 }
 
@@ -235,9 +298,13 @@ function startPolling() {
   if (pollTimer) return;
   pollTimer = setInterval(pollOnce, 1500);
   pollOnce();
+  flushOutbox();
   setInterval(heartbeat, 6000);
   // keep the dedupe set bounded
   setInterval(() => {
     if (seenCmids.size > 500) seenCmids = new Set([...seenCmids].slice(-200));
   }, 120000);
 }
+
+window.addEventListener("online", () => { reportConnection(false); flushOutbox(); pollOnce(); });
+window.addEventListener("offline", () => reportConnection(false));

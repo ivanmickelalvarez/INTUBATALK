@@ -78,11 +78,25 @@ stack of tablet plus app plus nurse dashboard plus backup laminated board.
   poll their room about every 1.5 seconds, so a patient tap reaches the nurse
   within that window. The patient also broadcasts over `BroadcastChannel`, so two
   tabs in one browser demonstrate the entire flow with no network at all, which is
-  ideal for a rehearsed classroom demo.
+  ideal for a rehearsed classroom demo. Cross-device delivery uses the shared API;
+  failed writes are retained in a local outbox and retried, with server-side `cmid`
+  deduplication preventing duplicate alerts.
 - **PWA:** a service worker caches the app shell, so the patient tablet keeps
   working through Wi-Fi blips. Audio unlock helpers satisfy iOS autoplay rules.
 - **Privacy by design:** no patient identifiers beyond the name and bed you type,
   messages auto-expire after 12 hours, and nothing touches an EHR.
+
+### Cross-device use
+
+For a public deployment, both devices must open the same deployed URL. The patient
+opens `/`, the nurse opens `/nurse`, and the nurse enters the patient's four-digit
+room code. The Cloudflare Worker deployment uses D1 as the shared durable store.
+
+For a local/LAN session, start the server on the host computer with `npm start` and
+use the printed **Wi-Fi / LAN** URL on both devices. Do not use `127.0.0.1` or
+`localhost` on the second device: those addresses point back to the second device
+itself. Both devices must be on the same network and the host firewall must allow
+the server port.
 
 ## Run it locally
 
@@ -108,12 +122,29 @@ npm run check       # Runs esbuild syntax check across all scripts
 - Printable board: `http://127.0.0.1:8788/board`
 - Diagnostic console: `http://127.0.0.1:8788/console`
 
-## Vercel Deployment (One-Click)
+## Cloudflare Deployment (recommended for cross-device use)
 
-INTUBATALK is completely pre-configured for Vercel deployment:
+The durable public deployment is the Cloudflare Worker in `worker.js`. Create a D1
+database, put its real database ID in `wrangler.jsonc`, and deploy with:
+
+```bash
+npx wrangler d1 create intubatalk
+npx wrangler deploy
+```
+
+The Worker creates its tables on first request. Open the resulting Worker URL on
+both devices and pair them with the patient's room code.
+
+## Vercel Deployment (compatibility only)
+
+INTUBATALK is pre-configured for Vercel deployment:
 - `vercel.json` provides clean URLs, asset rewrites, and CORS headers.
 - `api/` provides serverless function endpoints for `/api/session`, `/api/messages`, `/api/ack`, `/api/clear`, `/api/profile`, `/api/presence`, `/api/poll`.
 - `public/` contains all static assets.
+
+The included Vercel API fallback uses process memory and is not a durable shared
+store across serverless instances. Use the Cloudflare/D1 deployment above when
+cross-device synchronization must be reliable.
 
 **To deploy:**
 ```bash

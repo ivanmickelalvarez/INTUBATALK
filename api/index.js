@@ -63,6 +63,8 @@ module.exports = async function handler(req, res) {
         bed: String(b.bed ?? "").slice(0, 12),
         created_ms: Date.now(),
       };
+      const existing = store.messages.find((m) => m.room === msgObj.room && m.cmid && m.cmid === msgObj.cmid);
+      if (existing) return sendJSON(res, { ok: true, id: existing.id, duplicate: true });
       store.messages.push(msgObj);
       return sendJSON(res, { ok: true, id: msgObj.id });
     }

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<meta name="description" content="INTUBATALK privacy policy: what the bedside communication system stores, who can see it, how long data is kept, and what it never does — no patient data is sold, tracked, or shared.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Privacy Policy</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  :root { --nurse: #3f7fa7; --patient: #3fa796; }
+  .doc-wrap {
+    max-width: 760px; margin: 0 auto; padding: 0 20px 60px;
+    position: relative; z-index: 1;
+  }
+  .doc-header { text-align: center; margin: 26px 0 26px; }
+  .doc-badge {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 9px 22px 9px 10px; border-radius: 999px;
+    background: linear-gradient(175deg, #fdfcfb, #f1efe9);
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow: var(--clay-sm);
+    margin-bottom: 14px;
+  }
+  .doc-badge .brand-mark { width: 42px; height: 42px; border-radius: 14px; }
+  .doc-badge h1 {
+    font-family: var(--font-display); font-size: 17px; letter-spacing: .06em; color: var(--text);
+    margin: 0; font-weight: 700;
+  }
+  .doc-header h2 {
+    font-family: var(--font-display); font-size: clamp(28px, 6vw, 38px);
+    font-weight: 700; margin: 0 0 8px;
+  }
+  .doc-header p { color: var(--text-soft); margin: 0; font-size: 15px; line-height: 1.55; }
+  .doc-card {
+    background: var(--surface); border-radius: var(--radius-xl);
+    box-shadow: var(--clay-shadow); border: 1px solid rgba(255,255,255,.65);
+    padding: 26px 26px 12px; margin-bottom: 22px;
+  }
+  .doc-card h3 {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0 0 12px;
+    color: var(--text);
+  }
+  .doc-card h3 .ic { width: 22px; height: 22px; color: var(--accent-deep); flex-shrink: 0; }
+  .doc-card p, .doc-card li { color: var(--text-soft); font-size: 14.8px; line-height: 1.65; }
+  .doc-card p { margin: 0 0 12px; }
+  .doc-card ul { margin: 0 0 12px; padding-left: 20px; }
+  .doc-card li { margin-bottom: 7px; }
+  .doc-card b, .doc-card strong { color: var(--text); }
+  .never-list li { color: #a63a3a; }
+  .never-list li b { color: #a63a3a; }
+  .ok-list li::marker { color: var(--ok); }
+  .doc-back-bar {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px;
+  }
+  .doc-updated { text-align: center; color: var(--text-faint); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; margin-top: 26px; }
+  @media (max-width: 560px) {
+    .doc-card { padding: 20px 16px 8px; border-radius: 22px; }
+    .doc-header { margin: 18px 0 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-wrap">
+  <header class="doc-header">
+    <div class="doc-badge">
+      <div class="brand-mark" id="docMark" role="img" aria-label="INTUBATALK logo"></div>
+      <h1>INTUBATALK · ICU CLINICAL SYSTEM</h1>
+    </div>
+    <h2>Privacy Policy</h2>
+    <p>What this system stores, who can see it, how long it is kept — and what it never does.</p>
+  </header>
+
+  <article>
+    <section class="doc-card">
+      <h3><span data-ic="shield"></span>Who we are</h3>
+      <p>INTUBATALK is a bedside communication system for intubated and non-verbal ICU patients:
+      a patient tablet, a nurse dashboard, and a printable backup board. This policy explains the
+      data handled by the software in plain language. Hospital IT remains responsible for the
+      environment the system runs in.</p>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="write"></span>What we store</h3>
+      <ul>
+        <li><b>Patient name and bed number</b> — entered at the bedside, shown to the nurse who responds.</li>
+        <li><b>Room codes</b> — four-digit codes used to pair a tablet with a dashboard.</li>
+        <li><b>Requests and messages</b> — tiles, spelled words, pain scores, and blink answers the patient sends.</li>
+        <li><b>Acknowledgements</b> — which nurse responded, and when.</li>
+        <li><b>Nurse profiles</b> — the nurse's name and unit, kept only on the nurse's own device.</li>
+      </ul>
+      <p>On the nurse's device the request feed is also cached in browser storage so the dashboard
+      survives a brief network drop. Clearing the browser storage removes it.</p>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="camera"></span>The bedside camera (eye-blink mode)</h3>
+      <p>Eye-blink mode can open the <b>bedside camera</b> so the nurse can watch the patient's eyes
+      live on the tablet screen. Important limits:</p>
+      <ul>
+        <li>The camera only starts after explicit <b>permission granted on the device</b>, and only while the blink panel is open.</li>
+        <li>The video stream is <b>processed entirely on the device</b>. It is never recorded, never uploaded, and never sent to the nurse dashboard or any server.</li>
+        <li>Closing the eye-blink panel or the tablet's browser turns the camera off immediately.</li>
+        <li>The camera is an optional aid — the tactile one-blink / two-blink buttons always work without it.</li>
+      </ul>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="nurse"></span>Who can see what</h3>
+      <ul class="ok-list">
+        <li>The patient's tablet shows only that patient's own information.</li>
+        <li>The nurse dashboard shows only the beds that nurse added with a room code.</li>
+        <li>Anyone who knows a room code could connect to that bed — codes are meant for bedside pairing, not secrecy. Hospital staff should treat the network as a shared clinical environment.</li>
+        <li>Browser notifications and alarms are device-local; no alerts are emailed or texted.</li>
+      </ul>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="repeat"></span>How long data is kept</h3>
+      <p>Requests exist only for the current session: once acknowledged and handled, the feed clears
+      when the patient starts a new session or the cache is cleared. There is no archive, no export,
+      and no medical record integration.</p>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="emergency"></span>What we never do</h3>
+      <ul class="never-list">
+        <li><b>Sell, rent, or share patient data</b> with anyone.</li>
+        <li><b>Track</b> patients or staff across sites, or use advertising or analytics cookies.</li>
+        <li><b>Record or upload</b> camera or microphone video or audio.</li>
+        <li><b>Replace clinical judgment</b> — this tool relays messages; alarms are a supplement to, not a substitute for, standard ICU monitoring.</li>
+      </ul>
+    </section>
+
+    <section class="doc-card">
+      <h3><span data-ic="board"></span>Your choices</h3>
+      <ul>
+        <li>Use <b>Start over</b> on the patient tablet to wipe the session and begin fresh.</li>
+        <li>Deny or revoke camera permission in browser settings at any time.</li>
+        <li>Skip Emergency-push prompts the first time they appear — the system still works fully without them.</li>
+      </ul>
+    </section>
+  </article>
+
+  <div class="doc-back-bar">
+    <a class="btn" href="/choose">Back to role chooser</a>
+    <a class="btn" href="/nurse">Nurse dashboard</a>
+    <a class="btn" href="/board">Backup board</a>
+  </div>
+
+  <p class="doc-updated">Last updated · October 2026</p>
+</div>
+
+<script type="module">
+import { svg } from "/js/lib/icons.js";
+import { startAmbient } from "/js/lib/ambient.js";
+import { $, $$ } from "/js/lib/util.js";
+
+$("#docMark") && ($("#docMark").innerHTML = svg("voice"));
+$$("[data-ic]").forEach((el) => { if (el instanceof HTMLElement) el.innerHTML = svg(el.dataset.ic); });
+startAmbient();
+
+// Enhanced 3D background initialization
+document.documentElement.classList.add("ambient-3d-enabled");
+</script>
+</body>
+</html>

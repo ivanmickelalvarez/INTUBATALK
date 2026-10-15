@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<meta name="robots" content="noindex">
+<meta name="description" content="Page not found — the INTUBATALK page you tried to open does not exist. Head back to the role chooser, the patient tablet, or the nurse dashboard.">
+<meta name="color-scheme" content="light">
+<title>INTUBATALK · Page Not Found (404)</title>
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/base.css">
+<style>
+  :root { --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px); }
+  .nf-wrap {
+    min-height: 100vh; min-height: 100dvh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; text-align: center; padding: calc(24px + var(--safe-t)) 20px calc(28px + var(--safe-b));
+    position: relative; z-index: 1;
+  }
+  .nf-code {
+    font-family: var(--font-display);
+    font-size: clamp(96px, 24vw, 210px);
+    font-weight: 700; line-height: .9; letter-spacing: -.02em;
+    color: transparent;
+    background: linear-gradient(160deg, #55bcab 10%, #2f6588 60%, #bf6e55 100%);
+    -webkit-background-clip: text; background-clip: text;
+    text-shadow:
+      22px 26px 44px rgba(98, 106, 108, .14),
+      -14px -14px 28px rgba(255, 255, 255, .9);
+    animation: floaty 5.5s ease-in-out infinite;
+  }
+  @keyframes floaty {
+    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+    50% { transform: translateY(-9px) rotate(1.2deg); }
+  }
+  .nf-badge {
+    display: inline-flex; align-items: center; gap: 11px;
+    padding: 9px 22px 9px 10px; border-radius: 999px;
+    background: linear-gradient(175deg, #fdfcfb, #f1efe9);
+    border: 1.5px solid rgba(255, 255, 255, .95);
+    box-shadow: var(--clay-sm); margin: 10px 0 4px;
+  }
+  .nf-badge .brand-mark { width: 34px; height: 34px; border-radius: 11px; }
+  .nf-badge span { font-weight: 800; font-size: 12.5px; letter-spacing: .09em; color: var(--text-soft); }
+  .nf-wrap h1 {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 5.6vw, 30px); margin: 6px 0 0; color: var(--text);
+  }
+  .nf-sub {
+    color: var(--text-soft); font-size: 15px; max-width: 46ch; line-height: 1.6;
+    margin: 10px 0 26px; text-wrap: pretty;
+  }
+  .nf-links { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 560px; }
+  .nf-links .btn { min-width: 150px; }
+  @media (max-width: 460px) {
+    .nf-links { flex-direction: column; width: 100%; }
+    .nf-links .btn { width: 100%; min-height: 48px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nf-wrap">
+  <div class="nf-code" aria-hidden="true">404</div>
+  <div class="nf-badge">
+    <div class="brand-mark" id="nfMark" role="img" aria-label="INTUBATALK logo"></div>
+    <span>INTUBATALK · ICU CLINICAL SYSTEM</span>
+  </div>
+  <h1>This page went off the ward</h1>
+  <p class="nf-sub">The address you typed does not exist here. Choose where you are headed below — every real page is one tap away.</p>
+  <nav class="nf-links" aria-label="Recovery links">
+    <a class="btn btn-mint" href="/choose">Role chooser</a>
+    <a class="btn" href="/">Patient tablet</a>
+    <a class="btn" href="/nurse">Nurse dashboard</a>
+    <a class="btn" href="/board">Backup board</a>
+  </nav>
+</div>
+
+<script type="module">
+import { svg } from "/js/lib/icons.js";
+import { startAmbient } from "/js/lib/ambient.js";
+const mark = document.getElementById("nfMark");
+if (mark) mark.innerHTML = svg("voice");
+startAmbient();
+</script>
+</body>
+</html>

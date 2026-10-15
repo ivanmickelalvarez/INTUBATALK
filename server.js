@@ -148,6 +148,8 @@ async function handleApi(req, res, pathname) {
       created_ms: Date.now(),
     };
 
+    const existing = store.messages.find((m) => m.room === msgObj.room && m.cmid && m.cmid === msgObj.cmid);
+    if (existing) return sendJSON(res, { ok: true, id: existing.id, duplicate: true });
     store.messages.push(msgObj);
     saveStore();
     return sendJSON(res, { ok: true, id: msgObj.id });
@@ -435,7 +437,7 @@ function getLocalIp() {
 }
 
 function startListening(port, maxAttempts = 10) {
-  server.listen(port, () => {
+  server.listen(port, "0.0.0.0", () => {
     const localIp = getLocalIp();
     console.log("\n=======================================================");
     console.log("   INTUBATALK Server Online");
