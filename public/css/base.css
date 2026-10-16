@@ -193,6 +193,23 @@ img, svg { display: block; max-width: 100%; }
 .btn:active { transform: translateY(2px) scale(.99); box-shadow: var(--clay-pressed); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Hover lift: springy clay feedback on every solid button (pointer devices only) */
+@media (hover: hover) {
+  .btn:not(:disabled):hover { transform: translateY(-2px); transition-duration: .12s; transition-timing-function: cubic-bezier(.2, .9, .3, 1.4); }
+  .btn-mint:not(:disabled):hover { filter: brightness(1.05); box-shadow: 6px 10px 20px rgba(51, 138, 124, .4), -4px -4px 10px rgba(255, 255, 255, .5), inset 1px 1px 2px rgba(255, 255, 255, .4), inset -1px -2px 4px rgba(23, 82, 73, .28); }
+  .btn-red:not(:disabled):hover { filter: brightness(1.05); box-shadow: 6px 10px 20px rgba(184, 68, 68, .4), -4px -6px 14px rgba(255, 255, 255, .5), inset 1px 1px 2px rgba(255, 255, 255, .35), inset -1px -2px 4px rgba(130, 45, 45, .3); }
+  .btn-ghost:not(:disabled):hover { transform: translateY(-1px); }
+  .btn:active, .btn:active:not(:disabled):hover { transform: translateY(1px) scale(.99); transition-duration: .06s; }
+}
+
+/* Keyboard focus ring: visible, calm, clay-friendly */
+.btn:focus-visible, a:focus-visible, input:focus-visible, label:focus-visible {
+  outline: 3px solid rgba(63, 167, 150, .55);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+input:focus-visible, dialog input:focus-visible { outline-offset: 0; border-radius: var(--radius-md); }
+
 .btn-mint {
   background: linear-gradient(145deg, #4cb1a0, #39988a);
   color: var(--accent-ink);
@@ -251,6 +268,13 @@ img, svg { display: block; max-width: 100%; }
   white-space: nowrap;
 }
 .badge b { color: var(--text); }
+
+/* Clickable badges (role-nav switches) get gentle hover feedback */
+a.badge { text-decoration: none; transition: transform .12s ease, box-shadow .15s ease, color .12s ease, background .15s ease; }
+@media (hover: hover) {
+  a.badge:hover { transform: translateY(-2px); box-shadow: var(--clay-raised); color: var(--text); }
+  a.badge:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+}
 .badge.ok { background: var(--ok-soft); color: #2f7a50; }
 .badge.alert { background: var(--alert-soft); color: #a63a3a; }
 .badge.clay { background: var(--clay-soft); color: #9c563e; }

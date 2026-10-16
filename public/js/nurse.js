@@ -353,13 +353,8 @@ function renderDashboard() {
         <div>
           <div class="patient-rail-head">
             <h3>My Patients (${rooms.length})</h3>
-            <button class="btn btn-mint btn-sm" id="btnRailAddBed" style="padding:6px 10px;font-size:12.5px;font-weight:800">＋ Add Patient</button>
           </div>
-          <div class="card" style="font-size:13px;color:var(--text-soft);line-height:1.55;padding:14px 15px">
-            <div><b style="color:var(--text)">${esc(currentNurse.name)}</b> is monitoring <b>${rooms.length} patient${rooms.length === 1 ? "" : "s"}</b>.</div>
-            <div style="margin-top:6px">Full live status for each patient is on the right-side <b>Patient Status</b> panel. Tap a patient there to focus their requests.</div>
-          </div>
-          <div class="patient-list" id="patientList" style="margin-top:10px"></div>
+          <div class="patient-list" id="patientList" style="margin-top:4px"></div>
         </div>
 
         <div>
@@ -391,11 +386,9 @@ function renderPatientList() {
 
   if (!rooms.length) {
     el.innerHTML = `
-      <div class="empty" style="border-radius:18px;padding:22px 14px">
-        No patients on <b>${esc(currentNurse?.name || "this station")}</b>'s dashboard yet.<br>
-        <button class="btn btn-mint btn-sm" id="btnEmptyAddBed" style="margin-top:10px">＋ Add Patient</button>
+      <div class="empty" style="border-radius:18px;padding:18px 14px">
+        Connect a bedside tablet with its 4-digit code — its live status will appear here.
       </div>`;
-    $("#btnEmptyAddBed")?.addEventListener("click", openConnectDialog);
     return;
   }
 
@@ -1065,8 +1058,6 @@ function wireDashboardButtons() {
   });
 
   // “Add Patient” entry points: top bar persists (onclick), rails re-render (onclick resets safely)
-  const railAdd = $("#btnRailAddBed");
-  if (railAdd) railAdd.onclick = openConnectDialog;
   const statusAdd = $("#btnPatientStatusAdd");
   if (statusAdd) statusAdd.onclick = openConnectDialog;
   const statusRefresh = $("#btnPatientStatusRefresh");
@@ -1254,7 +1245,7 @@ if (!("Notification" in window)) $("#btnNotify").disabled = true;
 $("#btnNotify").addEventListener("click", async () => {
   if (!("Notification" in window)) return;
   const res = await Notification.requestPermission();
-  $("#btnNotify").innerHTML = `${svg("bell")}${res === "granted" ? "Alerts on" : "Alerts blocked"}`;
+  $("#btnNotify").innerHTML = `${svg("bell")}<span class="n-top-label">${res === "granted" ? "Alerts on" : "Alerts off"}</span>`;
 });
 
 // Modal Dialog Wiring
@@ -1291,7 +1282,7 @@ $("#btnMute")?.addEventListener("click", () => {
   mute = !mute;
   saveJSON(LS_MUTE, mute);
   audio.setMuted(mute);
-  $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound"}`;
+  $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}<span class="n-top-label">${mute ? "Muted" : "Sound"}</span>`;
   const m2 = $("#btnMute2");
   if (m2) m2.innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound on"}`;
   if (mute) { audio.alarmStop(); hideAlarm(); }

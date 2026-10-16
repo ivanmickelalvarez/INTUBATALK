@@ -220,6 +220,10 @@
 }
 .pain-btn small { font-size: 13px; color: var(--text-soft); font-weight: 700; }
 .pain-btn:active { transform: translateY(2px); box-shadow: var(--clay-pressed); }
+@media (hover: hover) {
+  .pain-btn:hover { transform: translateY(-3px); box-shadow: var(--clay-raised); transition: transform .14s cubic-bezier(.2, .9, .3, 1.4), box-shadow .15s ease; }
+  .pain-btn:active { transform: translateY(1px); transition-duration: .06s; }
+}
 .pain-btn.picked {
   background: linear-gradient(145deg, #4cb1a0, #38937f); color: #fff;
   border-color: rgba(255,255,255,.35);
@@ -245,6 +249,10 @@
   word-break: break-word;
 }
 .chip:active { transform: translateY(2px); box-shadow: var(--clay-pressed); }
+@media (hover: hover) {
+  .chip:hover { transform: translateY(-3px); box-shadow: var(--clay-raised); border-color: rgba(63, 167, 150, .35); transition: transform .14s cubic-bezier(.2, .9, .3, 1.4), box-shadow .15s ease, border-color .15s ease; }
+  .chip:active { transform: translateY(1px); transition-duration: .06s; }
+}
 .chip.sel {
   background: var(--accent-soft); border-color: var(--accent);
   color: #235f55; font-weight: 700;
@@ -276,6 +284,10 @@
   color: var(--text); min-width: 0; overflow: hidden;
 }
 .alph-grid button:active { transform: translateY(2px); box-shadow: var(--clay-pressed); }
+@media (hover: hover) {
+  .alph-grid button:hover { transform: translateY(-2px); box-shadow: var(--clay-raised); }
+  .alph-grid button:active { transform: translateY(1px); transition-duration: .06s; }
+}
 .alph-grid button.del { color: #a6701f; background: var(--warn-soft); }
 .alph-grid button.space { grid-column: span 3; font-size: 15px; gap: 6px; }
 .alph-grid button.send { grid-column: span 2; background: linear-gradient(145deg, #4cb1a0, #38937f); color: #fff; border-color: rgba(255,255,255,.35); gap: 6px; }

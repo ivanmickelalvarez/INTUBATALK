@@ -1,6 +1,6 @@
 // INTUBATALK service worker — offline-first app shell.
 // API calls are network-only (data freshness matters); everything else is cached.
-const CACHE = "intubatalk-v14";
+const CACHE = "intubatalk-v16";
 const SHELL = [
   "/", "/choose", "/nurse", "/board", "/dual", "/privacy", "/guidelines", "/404.html", "/manifest.webmanifest",
   "/css/base.css", "/css/patient.css", "/css/nurse.css",
