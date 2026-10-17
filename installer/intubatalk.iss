@@ -3,7 +3,7 @@
 ; Per-machine install to Program Files, with Start Menu shortcut and uninstaller.
 
 #define AppName "INTUBATALK"
-#define AppVersion "2.2.0"
+#define AppVersion "2.3.0"
 #define AppPublisher "INTUBATALK ICU System"
 #define AppExeName "INTUBATALK.exe"
 
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=.
-OutputBaseFilename=INTUBATALK-Setup-2.2.0
+OutputBaseFilename=INTUBATALK-Setup-2.3.0
 SetupIconFile=..\app.ico
 Compression=lzma2/max
 SolidCompression=yes

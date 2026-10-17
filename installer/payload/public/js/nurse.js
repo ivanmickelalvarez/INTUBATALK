@@ -243,8 +243,7 @@ function renderJoin() {
         </div>
         <div>
           <label for="inInitialRooms" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Bedside Room Code(s) <span style="font-weight:500">(Optional, comma-separated)</span></label>
-          <input id="inInitialRooms" placeholder="e.g. 1024, 2048" inputmode="numeric" autocomplete="off">
-          <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button.</small>
+          <input id="inInitialRooms" placeholder="e.g. 1024, 2048" inputmode="numeric" autocomplete="off">            <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button in the top bar.</small>
         </div>
         <div class="join-err hidden" id="errJoin"></div>
         <button type="submit" class="btn btn-mint" style="padding:15px;font-size:17px;margin-top:4px">Sign In & Open Dashboard</button>
@@ -353,13 +352,8 @@ function renderDashboard() {
         <div>
           <div class="patient-rail-head">
             <h3>My Patients (${rooms.length})</h3>
-            <button class="btn btn-mint btn-sm" id="btnRailAddBed" style="padding:6px 10px;font-size:12.5px;font-weight:800">＋ Add Patient</button>
           </div>
-          <div class="card" style="font-size:13px;color:var(--text-soft);line-height:1.55;padding:14px 15px">
-            <div><b style="color:var(--text)">${esc(currentNurse.name)}</b> is monitoring <b>${rooms.length} patient${rooms.length === 1 ? "" : "s"}</b>.</div>
-            <div style="margin-top:6px">Full live status for each patient is on the right-side <b>Patient Status</b> panel. Tap a patient there to focus their requests.</div>
-          </div>
-          <div class="patient-list" id="patientList" style="margin-top:10px"></div>
+          <div class="patient-list" id="patientList" style="margin-top:4px"></div>
         </div>
 
         <div>
@@ -367,7 +361,7 @@ function renderDashboard() {
           <div class="card" style="font-size:13.5px;color:var(--text-soft);display:grid;gap:10px;line-height:1.5">
             <div><b style="color:#a63a3a">Red cards are emergencies.</b> Siren rings continuously until acknowledged.</div>
             <div><b style="color:#2c7d70">Mint stamp means fresh request.</b> Tap Acknowledge to notify the patient.</div>
-            <div><b>Add patients:</b> Use “Add Patient” in the top bar or the Patient Status panel. Enter each tablet's 4-digit code.</div>
+            <div><b>Add patients:</b> Use “Add Patient” in the top bar, then enter each tablet's 4-digit code.</div>
             <div><b>Personalized response:</b> When you acknowledge, the patient's tablet displays your name (${esc(currentNurse.name)}).</div>
           </div>
         </div>
@@ -391,11 +385,9 @@ function renderPatientList() {
 
   if (!rooms.length) {
     el.innerHTML = `
-      <div class="empty" style="border-radius:18px;padding:22px 14px">
-        No patients on <b>${esc(currentNurse?.name || "this station")}</b>'s dashboard yet.<br>
-        <button class="btn btn-mint btn-sm" id="btnEmptyAddBed" style="margin-top:10px">＋ Add Patient</button>
+      <div class="empty" style="border-radius:18px;padding:18px 14px">
+        Connect a bedside tablet with its 4-digit code — its live status will appear here.
       </div>`;
-    $("#btnEmptyAddBed")?.addEventListener("click", openConnectDialog);
     return;
   }
 
@@ -939,10 +931,8 @@ function refreshPatientStatusList() {
   if (total === 0) {
     list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
       No patients on this dashboard yet.
-      <span class="ps-empty-strong">Tap “Add Patient” and enter a bedside tablet's 4-digit code.</span>
-      <button class="btn btn-mint btn-sm" id="btnStatusEmptyAdd" style="margin-top:12px;width:100%">＋ Add Patient</button>
+      <span class="ps-empty-strong">Tap “Add Patient” in the top bar and enter a bedside tablet's 4-digit code.</span>
     </div>`;
-    $("#btnStatusEmptyAdd")?.addEventListener("click", openConnectDialog);
     return;
   }
 
@@ -1064,11 +1054,7 @@ function wireDashboardButtons() {
     toastToast("All marked handled");
   });
 
-  // “Add Patient” entry points: top bar persists (onclick), rails re-render (onclick resets safely)
-  const railAdd = $("#btnRailAddBed");
-  if (railAdd) railAdd.onclick = openConnectDialog;
-  const statusAdd = $("#btnPatientStatusAdd");
-  if (statusAdd) statusAdd.onclick = openConnectDialog;
+  // “Add Patient” entry point: the top-bar button (btnAddPatient) is the single CTA
   const statusRefresh = $("#btnPatientStatusRefresh");
   if (statusRefresh) statusRefresh.onclick = () => {
     refreshPatientStatusList();
@@ -1254,7 +1240,7 @@ if (!("Notification" in window)) $("#btnNotify").disabled = true;
 $("#btnNotify").addEventListener("click", async () => {
   if (!("Notification" in window)) return;
   const res = await Notification.requestPermission();
-  $("#btnNotify").innerHTML = `${svg("bell")}${res === "granted" ? "Alerts on" : "Alerts blocked"}`;
+  $("#btnNotify").innerHTML = `${svg("bell")}<span class="n-top-label">${res === "granted" ? "Alerts on" : "Alerts off"}</span>`;
 });
 
 // Modal Dialog Wiring
@@ -1291,7 +1277,7 @@ $("#btnMute")?.addEventListener("click", () => {
   mute = !mute;
   saveJSON(LS_MUTE, mute);
   audio.setMuted(mute);
-  $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound"}`;
+  $("#btnMute").innerHTML = `${svg(mute ? "mute" : "bell")}<span class="n-top-label">${mute ? "Muted" : "Sound"}</span>`;
   const m2 = $("#btnMute2");
   if (m2) m2.innerHTML = `${svg(mute ? "mute" : "bell")}${mute ? "Muted" : "Sound on"}`;
   if (mute) { audio.alarmStop(); hideAlarm(); }

@@ -11,7 +11,8 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/css/base.css">
 <style>
   :root {
@@ -806,7 +807,7 @@
   <div class="app-splash-mark">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="8" x2="6" y2="16"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="18" y1="9" x2="18" y2="15"/></svg>
   </div>
-  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-word clay-title">INTUBATALK</div>
   <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
 </div>
 
@@ -827,7 +828,7 @@
           <line x1="18" y1="9" x2="18" y2="15"></line>
         </svg>
       </div>
-      <h1>INTUBATALK</h1>
+      <h1 class="clay-title">INTUBATALK</h1>
     </div>
     <p class="tag">Speak without a voice. Touch, spell, blink, alert.</p>
     <p class="sub"><span class="pulse-dot" aria-hidden="true"></span>Select your role to get started</p>
@@ -835,7 +836,7 @@
 
   <main class="roles-grid">
     <!-- Patient Card -->
-    <article class="role-card patient-card" data-tilt>
+    <article class="role-card patient-card glare" data-tilt data-shadow>
       <div>
         <div class="role-top">
           <span class="role-badge badge-patient">Bedside Patient</span>
@@ -882,7 +883,7 @@
     </article>
 
     <!-- Nurse Card -->
-    <article class="role-card nurse-card" data-tilt>
+    <article class="role-card nurse-card glare" data-tilt data-shadow>
       <div>
         <div class="role-top">
           <span class="role-badge badge-nurse">Nurse Station</span>

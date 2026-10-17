@@ -12,7 +12,8 @@
 <link rel="apple-touch-icon" href="/icons/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/patient.css">
 </head>
@@ -23,7 +24,7 @@
   <div class="app-splash-mark">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c-2 3-4 4.5-4 8a4 4 0 0 0 8 0c0-3.5-2-5-4-8z"/><rect x="6" y="17" width="12" height="4" rx="2"/><path d="M9 19h.01M12 19h.01M15 19h.01"/></svg>
   </div>
-  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-word clay-title">INTUBATALK</div>
   <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
 </div>
 <section id="wizard" class="hidden">
@@ -36,10 +37,10 @@
     </nav>
     <div class="gate-logo">
       <div class="brand-mark" id="gateMark" aria-hidden="true"></div>
-      <h1>INTUBATALK</h1>
+      <h1 class="clay-title">INTUBATALK</h1>
       <p class="tag">Speak without a voice. Touch, spell, blink, alert.</p>
     </div>
-    <form class="clay gate-card glare" id="gateForm" data-tilt>
+    <form class="clay gate-card glare" id="gateForm" data-tilt data-shadow>
       <div>
         <label for="inName">Patient name</label>
         <input id="inName" autocomplete="name" placeholder="e.g. Maria" required>

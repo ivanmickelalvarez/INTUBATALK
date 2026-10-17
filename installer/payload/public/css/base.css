@@ -193,6 +193,23 @@ img, svg { display: block; max-width: 100%; }
 .btn:active { transform: translateY(2px) scale(.99); box-shadow: var(--clay-pressed); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Hover lift: springy clay feedback on every solid button (pointer devices only) */
+@media (hover: hover) {
+  .btn:not(:disabled):hover { transform: translateY(-2px); transition-duration: .12s; transition-timing-function: cubic-bezier(.2, .9, .3, 1.4); }
+  .btn-mint:not(:disabled):hover { filter: brightness(1.05); box-shadow: 6px 10px 20px rgba(51, 138, 124, .4), -4px -4px 10px rgba(255, 255, 255, .5), inset 1px 1px 2px rgba(255, 255, 255, .4), inset -1px -2px 4px rgba(23, 82, 73, .28); }
+  .btn-red:not(:disabled):hover { filter: brightness(1.05); box-shadow: 6px 10px 20px rgba(184, 68, 68, .4), -4px -6px 14px rgba(255, 255, 255, .5), inset 1px 1px 2px rgba(255, 255, 255, .35), inset -1px -2px 4px rgba(130, 45, 45, .3); }
+  .btn-ghost:not(:disabled):hover { transform: translateY(-1px); }
+  .btn:active, .btn:active:not(:disabled):hover { transform: translateY(1px) scale(.99); transition-duration: .06s; }
+}
+
+/* Keyboard focus ring: visible, calm, clay-friendly */
+.btn:focus-visible, a:focus-visible, input:focus-visible, label:focus-visible {
+  outline: 3px solid rgba(63, 167, 150, .55);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+input:focus-visible, dialog input:focus-visible { outline-offset: 0; border-radius: var(--radius-md); }
+
 .btn-mint {
   background: linear-gradient(145deg, #4cb1a0, #39988a);
   color: var(--accent-ink);
@@ -251,6 +268,13 @@ img, svg { display: block; max-width: 100%; }
   white-space: nowrap;
 }
 .badge b { color: var(--text); }
+
+/* Clickable badges (role-nav switches) get gentle hover feedback */
+a.badge { text-decoration: none; transition: transform .12s ease, box-shadow .15s ease, color .12s ease, background .15s ease; }
+@media (hover: hover) {
+  a.badge:hover { transform: translateY(-2px); box-shadow: var(--clay-raised); color: var(--text); }
+  a.badge:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+}
 .badge.ok { background: var(--ok-soft); color: #2f7a50; }
 .badge.alert { background: var(--alert-soft); color: #a63a3a; }
 .badge.clay { background: var(--clay-soft); color: #9c563e; }
@@ -329,6 +353,17 @@ dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px)
 .app-splash-word {
   font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .06em;
 }
+
+/* Extruded clay wordmark: letterpress depth built from stacked text-shadows.
+   Reads as part of the same 3D clay world — soft, matte, no neon. */
+.clay-title {
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, .9),
+    0 2px 0 rgba(255, 255, 255, .55),
+    0 1px 2px rgba(70, 79, 85, .28),
+    0 3px 6px rgba(70, 79, 85, .22),
+    0 8px 18px rgba(70, 79, 85, .14);
+}
 .app-splash-dots { display: flex; gap: 9px; }
 .app-splash-dots::before,
 .app-splash-dots::after,
@@ -361,13 +396,25 @@ dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px)
 [data-tilt].glare::after {
   content: "";
   position: absolute; inset: 0; border-radius: inherit;
-  background: radial-gradient(260px circle at var(--glare-x, 50%) var(--glare-y, 30%), rgba(255, 255, 255, .55), transparent 65%);
-  opacity: .5;
+  /* Soft directional sheen: an off-center elliptical highlight, like light
+     raking across matte clay — no hard white spot. */
+  background: radial-gradient(90% 70% at calc(var(--glare-x, 50%) - 8%) calc(var(--glare-y, 30%) - 6%),
+              rgba(255, 255, 255, .34), rgba(255, 255, 255, .1) 42%, transparent 72%);
+  opacity: 0;
   pointer-events: none;
   mix-blend-mode: soft-light;
-  transition: opacity .3s ease;
+  transition: opacity .35s ease;
 }
-[data-tilt].glare:hover::after { opacity: .95; }
+[data-tilt].glare:hover::after { opacity: 1; }
+/* Cards that declare a movable shadow get the tilt-linked azimuth. */
+[data-tilt][data-shadow] {
+  box-shadow:
+    var(--tilt-shadow-x, 10px) var(--tilt-shadow-y, 16px) 32px rgba(98, 106, 108, .18),
+    calc(var(--tilt-shadow-x, 10px) * -.7) calc(var(--tilt-shadow-y, 16px) * -.6) 22px rgba(255, 255, 255, .9),
+    inset 1px 1px 3px rgba(255, 255, 255, .9),
+    inset -3px -4px 8px rgba(96, 100, 110, .08);
+  transition: box-shadow .25s ease;
+}
 
 /* ---------- Toast entrance ---------- */
 .ack { animation: toastin .28s cubic-bezier(.2, .9, .3, 1.2); }

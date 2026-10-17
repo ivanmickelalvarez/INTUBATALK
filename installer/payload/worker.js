@@ -10,6 +10,7 @@
 // POST /api/presence {room, patient, bed}
 // GET  /api/poll?since=... -> {messages, rooms}
 // Also supports multi-robot batch creation: POST /api/patients/batch.
+// env bindings: DB (D1), ASSETS, optional ALLOWED_ORIGINS (comma-separated cross-origin clients).
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -19,20 +20,44 @@ export default {
     const assets = await env.ASSETS.fetch(request);
     const headers = new Headers(assets.headers);
     headers.set("Permissions-Policy", "camera=(self), microphone=(self), geolocation=()");
+    headers.set("Content-Security-Policy", CSP);
+    for (const [k, v] of Object.entries(SECURITY_HEADERS)) headers.set(k, v);
     if (assets.status === 404) headers.set("X-Robots-Tag", "noindex");
     return new Response(assets.body, { status: assets.status, headers });
   },
 };
 
+// Cross-origin reads/writes are closed by default: the deployed frontend and the
+// API always share one origin, so the CORS layer only re-echoes origins that an
+// operator explicitly allowlisted via the ALLOWED_ORIGINS binding secret/env.
 const CORS = {
-  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
+  "Vary": "Origin",
 };
 
-const J = (d, status = 200) => new Response(JSON.stringify(d), {
+const CSP =
+  "default-src 'self'; " +
+  "script-src 'self' 'unsafe-inline'; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+  "font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data:; " +
+  "connect-src 'self'; " +
+  "frame-ancestors 'self'; " +
+  "base-uri 'self'; form-action 'self'";
+
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "SAMEORIGIN",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+};
+
+const withSecurity = (h = {}) => ({ "Content-Type": "application/json", ...CORS, ...SECURITY_HEADERS, ...h });
+
+const J = (d, status = 200, extraHeaders) => new Response(JSON.stringify(d), {
   status,
-  headers: { "Content-Type": "application/json", ...CORS },
+  headers: withSecurity(extraHeaders),
 });
 
 const E = (m, s = 400) => J({ error: m }, s);
@@ -77,8 +102,11 @@ const ensureSchema = (db) => {
 };
 
 async function api(request, env, url) {
-  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: withSecurity() });
   const p = url.pathname;
+  const rejected = guardRequest(request, env, url);
+  if (rejected) return rejected;
+  if (!rateLimit(request)) return tooMany();
   try {
     await ensureSchema(env.DB);
     if (p === "/api/session" && request.method === "POST") return await session(request, env);
@@ -104,6 +132,80 @@ const readBody = async (request) => {
 
 const ROOM_RE = /^\d{4}$/;
 
+// ── Request hardening: origin gate + per-IP rate limit ──────────────────────
+// The frontend, API and (in LAN mode) every tablet share one origin, so non-GET
+// API requests from a different Origin / Sec-Fetch-Site are rejected. curl and
+// native tools send no browser context headers and stay allowed, except for the
+// mass-read endpoints (rooms listing + batch create), which are browser-only and
+// therefore require real browser evidence — that is what "bot protection" means
+// for the discovery/enumeration surface.
+
+const isBrowserContext = (request) => {
+  const site = request.headers.get("sec-fetch-site");
+  return site === "same-origin" || site === "none";
+};
+
+const originMatchesRequest = (request, url) => {
+  const referer = request.headers.get("referer");
+  if (!referer) return false;
+  try {
+    const r = new URL(referer);
+    // Same host AND scheme (http on LAN, https on the edge) = trusted app origin.
+    return r.host === (request.headers.get("host") || url.host) && r.protocol === url.protocol;
+  } catch { return false; }
+};
+
+const originInAllowlist = (env, request) => {
+  const list = String(env?.ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (!list.length) return false;
+  const origin = request.headers.get("origin");
+  return origin !== null && list.includes(origin);
+};
+
+const HARDENED_ENDPOINTS = new Set(["/api/rooms", "/api/patients/batch"]);
+
+// Returns null when the request is acceptable, else a Response rejecting it.
+const guardRequest = (request, env, url) => {
+  if (request.method !== "GET" && request.method !== "POST") {
+    return E("method not allowed", 405);
+  }
+  if (HARDENED_ENDPOINTS.has(url.pathname)) {
+    const browserTrusted =
+      isBrowserContext(request) ||
+      originMatchesRequest(request, url) ||
+      originInAllowlist(env, request);
+    if (!browserTrusted) return E("forbidden", 403);
+  }
+  return null;
+};
+
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_REQUESTS = 180;
+const rateBuckets = new Map();
+
+const rateLimit = (request) => {
+  const ip = request.headers.get("cf-connecting-ip") || "unknown";
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip) || { hits: [] };
+  bucket.hits = bucket.hits.filter((t) => now - t < RATE_WINDOW_MS);
+  const allowed = bucket.hits.length < RATE_MAX_REQUESTS;
+  if (allowed) bucket.hits.push(now);
+  rateBuckets.set(ip, bucket);
+  // Keep the map bounded; one isolate only.
+  if (rateBuckets.size > 4000) {
+    for (const [key, value] of rateBuckets) {
+      if (!value.hits.length) rateBuckets.delete(key);
+      if (rateBuckets.size <= 3000) break;
+    }
+  }
+  return allowed;
+};
+
+const tooMany = () => new Response(JSON.stringify({ error: "rate limited" }), {
+  status: 429,
+  headers: { ...withSecurity(), "Retry-After": "30" },
+});
+
 async function roomInfo(url, env) {
   const code = url.searchParams.get("code") || url.searchParams.get("room") || "";
   if (!ROOM_RE.test(code)) return E("bad room");
@@ -119,20 +221,20 @@ async function roomInfo(url, env) {
 }
 
 async function listRooms(env) {
+  // Bounded, trimmed read: room + display metadata only, capped at 50, newest first.
   const { results } = await env.DB.prepare("SELECT room, name, bed, last_seen_ms FROM rooms ORDER BY last_seen_ms DESC LIMIT 50").all();
   const rooms = (results || []).map((r) => ({
     room: r.room,
     name: r.name || "Patient",
     bed: r.bed || "",
     online: (Date.now() - (r.last_seen_ms || 0)) < 15000,
-    last_seen_ms: r.last_seen_ms || 0,
   }));
   return J({ ok: true, rooms });
 }
 
 async function batchPatients(request, env) {
   const b = await readBody(request);
-  const list = Array.isArray(b.patients) ? b.patients : [];
+  const list = (Array.isArray(b.patients) ? b.patients : []).slice(0, 20);
   const results = [];
   for (const item of list) {
     const name = String(item.name ?? "").trim().slice(0, 40) || "Patient";

@@ -35,6 +35,26 @@
 }
 .n-top::-webkit-scrollbar { display: none; }
 
+/* Icon-only topbar buttons (utility actions): square, calm, tooltipped.
+   40px minimum box everywhere, 44px on touch / hybrid devices — a 20px-wide
+   bare icon is untappable on a bedside tablet (44px is the accessibility
+   floor). Applies to every topbar action, not just .btn-ic, because label
+   collapse turns regular .btn-sm buttons into icon-only chips too. */
+.n-top .btn-ic { padding: 7px 10px; gap: 0; min-width: 40px; min-height: 40px; justify-content: center; }
+.n-top .btn-ic .ic { width: 17px; height: 17px; }
+.n-top .btn-sm { min-width: 40px; }
+@media (hover: none) {
+  .n-top .btn-ic, .n-top .btn-sm { min-width: 44px; min-height: 44px; }
+}
+.n-top-label-sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+/* Labels hidden progressively: primary actions keep labels until narrow */
+@media (max-width: 1250px) {
+  .n-top-label { display: none; }
+}
+
 /* Brand logo */
 .n-brand {
   display: flex;
@@ -77,7 +97,7 @@
   .n-top { gap: 6px; padding: calc(8px + var(--safe-t)) 12px 8px; }
   .n-brand .dash-word { display: none; }
   .n-top .badge { font-size: 11px; padding: 3px 9px; }
-  .n-top .btn-sm { padding: 5px 9px; font-size: 12px; min-height: 36px; }
+  .n-top .btn-sm { padding: 5px 9px; font-size: 12px; min-height: 40px; }
 }
 @media (max-width: 600px) {
   .n-logo-word { font-size: 15px; }
@@ -314,6 +334,8 @@
   gap: 6px;
 }
 .filter-pill:hover { color: var(--text); transform: translateY(-1px); }
+.filter-pill:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+.filter-pill:focus-visible { outline: 3px solid rgba(63, 167, 150, .55); outline-offset: 2px; }
 .filter-pill.active {
   background: linear-gradient(145deg, #4cb1a0, #38937f);
   color: #fff;
@@ -411,6 +433,20 @@
 /* Dimmed for handled requests */
 .req.done { opacity: .55; }
 
+/* Hover lift + press feedback on request cards (pointer devices only).
+   Cards are not buttons, so the lift is subtler and the tilt layer stays in charge of 3D. */
+@media (hover: hover) {
+  .article-hover-anim.req:hover, article[data-cmid]:hover {
+    transform: translateY(-3px);
+    box-shadow: 10px 14px 26px rgba(88, 100, 96, .18), -6px -6px 14px rgba(255, 255, 255, .75);
+    transition: transform .16s cubic-bezier(.2, .9, .3, 1.35), box-shadow .18s ease;
+  }
+  article[data-cmid]:active { transform: translateY(0) scale(.995); transition-duration: .07s; }
+}
+
+/* Feed action buttons: explicit press-down that beats the hover lift */
+.req .acts .btn:active { transform: translateY(1px) scale(.98); box-shadow: var(--clay-pressed); }
+
 /* ────────────────────────────────────────────
    SIDE RAIL (left sidebar within the n-cols grid)
    ──────────────────────────────────────────── */
@@ -418,29 +454,13 @@
 .rail { display: grid; gap: 16px; }
 .rail h3 {
   margin: 0 0 8px;
-  font-size: 12px;
-  color: var(--text-soft);
-  font-weight: 800;
-  letter-spacing: .09em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: .01em;
 }
 .patient-list { display: grid; gap: 10px; }
-
-/* Legacy .patient in rail (fallback) */
-.patient {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid rgba(255,255,255,.65);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--clay-sm);
-  padding: 14px 16px;
-  word-break: break-word;
-}
-.patient .nm { font-weight: 800; font-size: 15.5px; }
-.patient .sub { color: var(--text-soft); font-size: 12px; margin-top: 3px; font-weight: 600; }
 
 /* Empty state */
 .empty {
@@ -484,6 +504,12 @@
   transform: translateY(-2px);
   box-shadow: var(--clay-raised);
 }
+.patient-card-item:active {
+  transform: translateY(1px) scale(.99);
+  box-shadow: var(--clay-pressed);
+  transition-duration: .06s;
+}
+.patient-card-item:focus-visible { outline: 3px solid rgba(63, 167, 150, .55); outline-offset: 2px; }
 .patient-card-item.selected {
   border-color: var(--accent);
   background: linear-gradient(145deg, #f7fcfb, #eef7f5);
@@ -567,6 +593,8 @@
   gap: 5px;
 }
 .patient-pill:hover { color: var(--text); border-color: var(--line-strong); }
+.patient-pill:active { transform: translateY(1px); box-shadow: var(--clay-pressed); }
+.filter-pill:active, .patient-pill:active { transition-duration: .06s; }
 .patient-pill.active {
   background: var(--accent-soft);
   color: #235f55;
@@ -601,6 +629,11 @@
   transform: translateY(-2px);
   border-color: var(--accent);
   background: var(--surface);
+}
+.nurse-profile-card:active {
+  transform: translateY(1px) scale(.995);
+  box-shadow: var(--clay-pressed);
+  transition-duration: .06s;
 }
 .nurse-profile-card.active {
   border-color: var(--accent);
@@ -671,6 +704,11 @@
   border-color: var(--accent);
   box-shadow: var(--clay-raised);
   transform: translateY(-1px);
+}
+.patient-status-item:active {
+  transform: translateY(1px) scale(.99);
+  box-shadow: var(--clay-pressed);
+  transition-duration: .06s;
 }
 .patient-status-item:focus-visible {
   outline: 2px solid var(--accent);

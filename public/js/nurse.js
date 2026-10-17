@@ -243,8 +243,7 @@ function renderJoin() {
         </div>
         <div>
           <label for="inInitialRooms" style="font-size:13px;font-weight:700;color:var(--text-soft);display:block;margin-bottom:5px">Bedside Room Code(s) <span style="font-weight:500">(Optional, comma-separated)</span></label>
-          <input id="inInitialRooms" placeholder="e.g. 1024, 2048" inputmode="numeric" autocomplete="off">
-          <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button.</small>
+          <input id="inInitialRooms" placeholder="e.g. 1024, 2048" inputmode="numeric" autocomplete="off">            <small style="display:block;color:var(--text-soft);font-size:12px;margin-top:4px">You can add more patients anytime with the “Add Patient” button in the top bar.</small>
         </div>
         <div class="join-err hidden" id="errJoin"></div>
         <button type="submit" class="btn btn-mint" style="padding:15px;font-size:17px;margin-top:4px">Sign In & Open Dashboard</button>
@@ -362,7 +361,7 @@ function renderDashboard() {
           <div class="card" style="font-size:13.5px;color:var(--text-soft);display:grid;gap:10px;line-height:1.5">
             <div><b style="color:#a63a3a">Red cards are emergencies.</b> Siren rings continuously until acknowledged.</div>
             <div><b style="color:#2c7d70">Mint stamp means fresh request.</b> Tap Acknowledge to notify the patient.</div>
-            <div><b>Add patients:</b> Use “Add Patient” in the top bar or the Patient Status panel. Enter each tablet's 4-digit code.</div>
+            <div><b>Add patients:</b> Use “Add Patient” in the top bar, then enter each tablet's 4-digit code.</div>
             <div><b>Personalized response:</b> When you acknowledge, the patient's tablet displays your name (${esc(currentNurse.name)}).</div>
           </div>
         </div>
@@ -932,10 +931,8 @@ function refreshPatientStatusList() {
   if (total === 0) {
     list.innerHTML = `<div class="patient-status-empty-state" id="patientStatusEmpty">
       No patients on this dashboard yet.
-      <span class="ps-empty-strong">Tap “Add Patient” and enter a bedside tablet's 4-digit code.</span>
-      <button class="btn btn-mint btn-sm" id="btnStatusEmptyAdd" style="margin-top:12px;width:100%">＋ Add Patient</button>
+      <span class="ps-empty-strong">Tap “Add Patient” in the top bar and enter a bedside tablet's 4-digit code.</span>
     </div>`;
-    $("#btnStatusEmptyAdd")?.addEventListener("click", openConnectDialog);
     return;
   }
 
@@ -1057,9 +1054,7 @@ function wireDashboardButtons() {
     toastToast("All marked handled");
   });
 
-  // “Add Patient” entry points: top bar persists (onclick), rails re-render (onclick resets safely)
-  const statusAdd = $("#btnPatientStatusAdd");
-  if (statusAdd) statusAdd.onclick = openConnectDialog;
+  // “Add Patient” entry point: the top-bar button (btnAddPatient) is the single CTA
   const statusRefresh = $("#btnPatientStatusRefresh");
   if (statusRefresh) statusRefresh.onclick = () => {
     refreshPatientStatusList();

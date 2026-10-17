@@ -14,8 +14,8 @@ const reduced = () => {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 };
 
-const MAX_YAW = 7;   // degrees of horizontal lean
-const MAX_PITCH = 9; // degrees of vertical lean
+const MAX_YAW = 6;   // degrees of horizontal lean
+const MAX_PITCH = 8; // degrees of vertical lean
 
 const attached = new WeakSet();
 
@@ -31,10 +31,20 @@ function attach(el, { max = 1 } = {}) {
 
   const step = () => {
     frame = 0;
-    rx += (trx - rx) * 0.18;
-    ry += (try_ - ry) * 0.18;
+    rx += (trx - rx) * 0.12;   // slightly slower ease = heavier, more physical clay
+    ry += (try_ - ry) * 0.12;
+    // Depth: inner layers pushed away on the leaning side for layered parallax.
+    const tz = -(Math.abs(rx) + Math.abs(ry)) * 0.6;
     el.style.transform =
-      `perspective(900px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(0)`;
+      `perspective(1000px) rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg) translateZ(${tz.toFixed(2)}px)`;
+    // Light comes from top-left: leaning into the light lowers the azimuth,
+    // leaning away stretches the shadow. Synthesized, not baked.
+    const shX = (-ry * 1.4).toFixed(1);
+    const shY = (rx * 1.4 + 14).toFixed(1);
+    el.style.setProperty("--tilt-shadow-x", `${shX}px`);
+    el.style.setProperty("--tilt-shadow-y", `${shY}px`);
+    // Glare quadrant: pointer position pushed slightly toward the light source
+    // so the sheen stays believable rather than mirroring the cursor exactly.
     el.style.setProperty("--glare-x", `${(mx * 100).toFixed(1)}%`);
     el.style.setProperty("--glare-y", `${(my * 100).toFixed(1)}%`);
     if (Math.abs(trx - rx) > 0.05 || Math.abs(try_ - ry) > 0.05) schedule();

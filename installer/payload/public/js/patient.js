@@ -651,42 +651,6 @@ function openCaps() {
   dlg.showModal();
 }
 
-// ------------------------------------------------------------------ print backup board
-
-function doPrint() {
-  const tiles = ["emergency", ...Object.keys(NEEDS)]
-    .map((k) => {
-      const def = k === "emergency"
-        ? { icon: "emergency", label: "EMERGENCY, CALL FOR HELP", cls: "red" }
-        : needDef(k);
-      return `<div class="tile ${def.cls || ""}"><span class="ic ic-lg">${svg(def.icon)}</span><span>${esc(def.label)}</span></div>`;
-    })
-    .join("");
-  const w = window.open("", "itk-board", "width=1100,height=800");
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>INTUBATALK board, ${esc(profile.name)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@600;700;800&display=swap" rel="stylesheet">
-<style>
-body{font-family:'Public Sans',Arial,sans-serif;background:#f3f1ec;color:#263340;margin:0}
-h1{font-size:28px;margin:16px 22px 2px;letter-spacing:.01em}.sub{margin:0 22px 16px;color:#5d6c78;font-size:14px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:0 22px 26px}
-.tile{background:#f8f7f4;border:1px solid rgba(255,255,255,.7);border-radius:22px;min-height:150px;box-shadow:8px 8px 18px rgba(103,112,108,.16),-8px -8px 18px rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:24px;font-weight:800;text-align:center;padding:14px}
-.tile svg{width:56px;height:56px;color:#5d6c78}
-.tile.red{background:linear-gradient(145deg,#dd6161,#bd4848);color:#fff}
-.tile.red svg{color:#fff}
-.tile.mint{background:linear-gradient(145deg,#4cb1a0,#38937f);color:#fff}
-.tile.mint svg{color:#fff}
-.foot{margin:10px 22px;color:#5d6c78;font-size:13px;max-width:100ch}
-@media print{@page{size:A4 landscape;margin:10mm}.noprint{display:none}}
-</style></head><body>
-<h1>INTUBATALK communication board</h1>
-<p class="sub">Patient: <b>${esc(profile.name)}</b> &nbsp; Bed ${esc(profile.bed || "?")} &nbsp; Print and laminate as the backup.</p>
-<div class="grid">${tiles}</div>
-<p class="foot">Point at a tile to communicate a need. For emergencies keep pointing until a nurse arrives. Use the tablet app whenever it is available.</p>
-<p class="foot noprint"><button onclick="window.print()" style="padding:10px 18px;border-radius:12px;border:1px solid #c9c3b7;background:#f8f7f4;font-weight:700;cursor:pointer">Print or save as PDF</button></p>
-</body></html>`);
-  w.document.close();
-}
-
 // ------------------------------------------------------------------ boot
 // Every time the app is opened or reopened, a new patient login is required.
 

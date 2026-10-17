@@ -11,7 +11,8 @@
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/nurse.css">
 </head>
@@ -22,7 +23,7 @@
   <div class="app-splash-mark">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="6" y1="8" x2="6" y2="16"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="18" y1="9" x2="18" y2="15"/></svg>
   </div>
-  <div class="app-splash-word">INTUBATALK</div>
+  <div class="app-splash-word clay-title">INTUBATALK</div>
   <div class="app-splash-dots"><span class="app-splash-dot"></span></div>
 </div>
 <div class="n-app">
@@ -67,7 +68,6 @@
         <span class="patient-status-summary" id="patientStatusSummary"></span>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" id="btnPatientStatusRefresh" title="Refresh patient statuses" style="padding:4px 8px;font-size:12px">↻</button>
-          <button class="btn btn-mint btn-sm" id="btnPatientStatusAdd" title="Add another patient" style="padding:4px 10px;font-size:12px;font-weight:800">＋ Add</button>
         </div>
       </div>
     </div>

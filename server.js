@@ -59,6 +59,25 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// Browser-enforced safety headers, mirrored from worker.js so the local/EXE
+// deployment gets the same policy surface as the edge deployment.
+const CSP =
+  "default-src 'self'; " +
+  "script-src 'self' 'unsafe-inline'; " +
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+  "font-src 'self' https://fonts.gstatic.com; " +
+  "img-src 'self' data:; " +
+  "connect-src 'self'; " +
+  "frame-ancestors 'self'; " +
+  "base-uri 'self'; form-action 'self'";
+
+const SECURITY_HEADERS = {
+  "Content-Security-Policy": CSP,
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "SAMEORIGIN",
+};
+
 const sendJSON = (res, data, status = 200) => {
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -82,10 +101,69 @@ const parseBody = (req) =>
 const ROOM_RE = /^\d{4}$/;
 const generateRoom = () => String(Math.floor(1000 + Math.random() * 9000));
 
+// ── Request hardening (mirrors worker.js) ────────────────────────────────────
+// API calls always share the origin with the pages on local/LAN, so discovery
+// endpoints require real browser-context headers (Sec-Fetch-Site / same-host
+// Origin-Referer). Plain server-to-server clients stay allowed everywhere else,
+// but are rate limited per IP.
+
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_REQUESTS = 180;
+const rateBuckets = new Map();
+
+const clientIp = (req) => (req.socket?.remoteAddress || "unknown").replace(/^::ffff:/, "");
+
+const rateLimit = (req) => {
+  const ip = clientIp(req);
+  const now = Date.now();
+  const bucket = rateBuckets.get(ip) || { hits: [] };
+  bucket.hits = bucket.hits.filter((t) => now - t < RATE_WINDOW_MS);
+  const allowed = bucket.hits.length < RATE_MAX_REQUESTS;
+  if (allowed) bucket.hits.push(now);
+  rateBuckets.set(ip, bucket);
+  if (rateBuckets.size > 4000) {
+    for (const [key, value] of rateBuckets) {
+      if (!value.hits.length) rateBuckets.delete(key);
+      if (rateBuckets.size <= 3000) break;
+    }
+  }
+  return allowed;
+};
+
+const originMatchesRequest = (req, parsedUrl) => {
+  const referer = req.headers.referer;
+  if (!referer) return false;
+  try {
+    const r = new URL(referer);
+    return r.host === (req.headers.host || parsedUrl.host) && r.protocol === parsedUrl.protocol;
+  } catch { return false; }
+};
+
+const isBrowserContext = (req) => {
+  const site = req.headers["sec-fetch-site"];
+  return site === "same-origin" || site === "none";
+};
+
+// Returns null when acceptable, else throws a Response-ish handled by handleApi.
+const guardRequest = (req, parsedUrl) => {
+  if (parsedUrl.pathname === "/api/rooms" || parsedUrl.pathname === "/api/patients/batch") {
+    if (isBrowserContext(req) || originMatchesRequest(req, parsedUrl)) return null;
+    throw { status: 403, message: "forbidden" };
+  }
+  return null;
+};
+
 // API handlers
 async function handleApi(req, res, pathname) {
   const parsedUrl = new URL(req.url, "http://localhost");
   const query = Object.fromEntries(parsedUrl.searchParams);
+
+  try {
+    guardRequest(req, parsedUrl);
+    if (!rateLimit(req)) return sendJSON(res, { error: "rate limited" }, 429);
+  } catch (guard) {
+    return sendError(res, guard.message || "forbidden", guard.status || 403);
+  }
 
   // POST /api/session
   if (pathname === "/api/session" && req.method === "POST") {
@@ -343,7 +421,7 @@ async function handleApi(req, res, pathname) {
 // Static file server
 function serveStatic(req, res, pathname) {
   let cleanPath = pathname;
-  if (cleanPath === "/" || cleanPath === "") cleanPath = "/nurse.html";
+  if (cleanPath === "/" || cleanPath === "") cleanPath = "/index.html";
   else if (cleanPath === "/choose") cleanPath = "/choose.html";
   else if (cleanPath === "/nurse") cleanPath = "/nurse.html";
   else if (cleanPath === "/board") cleanPath = "/board.html";
@@ -399,6 +477,7 @@ function serveStatic(req, res, pathname) {
   res.writeHead(200, {
     "Content-Type": contentType,
     ...CORS_HEADERS,
+    ...SECURITY_HEADERS,
     // Camera is needed by the patient's eye-blink camera assist (same-origin only).
     "Permissions-Policy": "camera=(self), microphone=(self), geolocation=()",
     "Cache-Control": isImmutableArt ? "public, max-age=31536000, immutable" : "no-cache",

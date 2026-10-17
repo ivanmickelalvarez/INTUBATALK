@@ -1,6 +1,6 @@
 // INTUBATALK service worker — offline-first app shell.
 // API calls are network-only (data freshness matters); everything else is cached.
-const CACHE = "intubatalk-v16";
+const CACHE = "intubatalk-v20";
 const SHELL = [
   "/", "/choose", "/nurse", "/board", "/dual", "/privacy", "/guidelines", "/404.html", "/manifest.webmanifest",
   "/css/base.css", "/css/patient.css", "/css/nurse.css",
@@ -27,16 +27,26 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.startsWith("/api/")) return; // live data, no cache
 
   // New pages added later must not be cached as irreversible app-shell pins.
+  // Stale-while-revalidate, with a document fallback: when a navigated page was
+  // never cached (e.g. a new route visited once online, then re-visited in a
+  // dead Wi-Fi ward) fall back to the app-shell entry that actually exists,
+  // instead of a naked browser error. The shell covers /, /choose, /nurse and
+  // the rest of SHELL, so every route has something useful to show offline.
   e.respondWith(
     caches.match(e.request).then((hit) => {
       const fetched = fetch(e.request).then((res) => {
-        // refresh cache in background for same-origin GETs
         if (res && res.ok && e.request.method === "GET") {
           caches.open(CACHE).then((c) => c.put(e.request, res.clone()));
         }
         return res;
-      }).catch(() => hit);
-      return hit || fetched;
+      });
+      const offlineFallback = async () => {
+        if (e.request.mode === "navigate") {
+          return (await caches.match("/")) || (await caches.match("/choose")) || (!hit);
+        }
+        return hit;
+      };
+      return hit || fetched.catch(offlineFallback);
     })
   );
 });

@@ -43,7 +43,24 @@
 @media (max-width: 480px) {
   .gate { padding: calc(18px + var(--safe-t)) 14px calc(40px + var(--safe-b)); }
 }
-.gate-logo { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 14px 0 26px; text-align: center; }
+/* Short landscape viewports (phones/tablets rotated on a pillow or arm mount):
+   the logo column dominates vertical space, so compress it and let the gate
+   center scroll reach the CTA without a two-finger hunt. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .gate { padding: 2px 20px 8px; }
+  .role-nav { margin-bottom: 3px !important; padding: 0; gap: 4px; }
+  .role-nav .badge { padding: 2px 8px !important; font-size: 10.5px !important; }
+  .role-nav .badge svg, .role-nav .badge span[data-ic] { display: none; }
+  .gate-logo { margin: 0; gap: 2px; }
+  .gate-logo .brand-mark { display: none; }
+  .gate-logo h1 { font-size: 16px; margin: 0; }
+  .gate-logo .tag { display: none; }
+  .gate-card { gap: 6px !important; padding: 8px 14px 10px !important; }
+  .gate-card label { margin-bottom: 2px !important; font-size: 11px !important; }
+  .gate-card input { padding: 6px 10px !important; font-size: 14px !important; border-radius: 8px !important; }
+  .gate-card .hint { display: none !important; }
+  .gate-cta { padding: 8px !important; font-size: 14px !important; margin-top: 0 !important; }
+}
 .gate-logo .brand-mark { width: 76px; height: 76px; border-radius: 24px; box-shadow: var(--clay-shadow), inset 1px 2px 3px rgba(255,255,255,.45), inset -2px -3px 5px rgba(23,82,73,.3); }
 .gate-logo .brand-mark .ic { width: 42px; height: 42px; }
 .gate-logo h1 { font-family: var(--font-display); font-size: clamp(26px, 7vw, 34px); margin: 6px 0 0; letter-spacing: .02em; }

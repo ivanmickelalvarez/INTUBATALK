@@ -35,9 +35,17 @@
 }
 .n-top::-webkit-scrollbar { display: none; }
 
-/* Icon-only topbar buttons (utility actions): square, calm, tooltipped */
-.n-top .btn-ic { padding: 7px 10px; gap: 0; }
+/* Icon-only topbar buttons (utility actions): square, calm, tooltipped.
+   40px minimum box everywhere, 44px on touch / hybrid devices — a 20px-wide
+   bare icon is untappable on a bedside tablet (44px is the accessibility
+   floor). Applies to every topbar action, not just .btn-ic, because label
+   collapse turns regular .btn-sm buttons into icon-only chips too. */
+.n-top .btn-ic { padding: 7px 10px; gap: 0; min-width: 40px; min-height: 40px; justify-content: center; }
 .n-top .btn-ic .ic { width: 17px; height: 17px; }
+.n-top .btn-sm { min-width: 40px; }
+@media (hover: none) {
+  .n-top .btn-ic, .n-top .btn-sm { min-width: 44px; min-height: 44px; }
+}
 .n-top-label-sr {
   position: absolute; width: 1px; height: 1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap;
@@ -89,7 +97,7 @@
   .n-top { gap: 6px; padding: calc(8px + var(--safe-t)) 12px 8px; }
   .n-brand .dash-word { display: none; }
   .n-top .badge { font-size: 11px; padding: 3px 9px; }
-  .n-top .btn-sm { padding: 5px 9px; font-size: 12px; min-height: 36px; }
+  .n-top .btn-sm { padding: 5px 9px; font-size: 12px; min-height: 40px; }
 }
 @media (max-width: 600px) {
   .n-logo-word { font-size: 15px; }
@@ -453,22 +461,6 @@
   letter-spacing: .01em;
 }
 .patient-list { display: grid; gap: 10px; }
-
-/* Legacy .patient in rail (fallback) */
-.patient {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: var(--surface);
-  border: 1px solid rgba(255,255,255,.65);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--clay-sm);
-  padding: 14px 16px;
-  word-break: break-word;
-}
-.patient .nm { font-weight: 800; font-size: 15.5px; }
-.patient .sub { color: var(--text-soft); font-size: 12px; margin-top: 3px; font-weight: 600; }
 
 /* Empty state */
 .empty {

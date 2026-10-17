@@ -22,8 +22,8 @@ using System.Reflection;
 [assembly: AssemblyTitle("INTUBATALK")]
 [assembly: AssemblyDescription("Adaptive communication system for intubated ICU patients. Desktop hub with patient tablet, nurse dashboard, dual simulator and printable backup board.")]
 [assembly: AssemblyProduct("INTUBATALK ICU System")]
-[assembly: AssemblyVersion("2.2.0.0")]
-[assembly: AssemblyFileVersion("2.2.0.0")]
+[assembly: AssemblyVersion("2.3.0.0")]
+[assembly: AssemblyFileVersion("2.3.0.0")]
 
 namespace IntubaTalk
 {
@@ -36,16 +36,25 @@ namespace IntubaTalk
             Application.SetCompatibleTextRenderingDefault(false);
 
             string initialRoute = "";
+            bool roleChosen = false;
             bool startInTray = false;
 
             foreach (string arg in args)
             {
-                if (arg.Equals("--patient", StringComparison.OrdinalIgnoreCase)) initialRoute = "/?fresh=1";
-                else if (arg.Equals("--nurse", StringComparison.OrdinalIgnoreCase)) initialRoute = "/nurse?fresh=1";
-                else if (arg.Equals("--dual", StringComparison.OrdinalIgnoreCase)) initialRoute = "/dual";
-                else if (arg.Equals("--board", StringComparison.OrdinalIgnoreCase)) initialRoute = "/board";
-                else if (arg.Equals("--choose", StringComparison.OrdinalIgnoreCase)) initialRoute = "/choose";
+                if (arg.Equals("--patient", StringComparison.OrdinalIgnoreCase)) { initialRoute = "/?fresh=1"; roleChosen = true; }
+                else if (arg.Equals("--nurse", StringComparison.OrdinalIgnoreCase)) { initialRoute = "/nurse?fresh=1"; roleChosen = true; }
+                else if (arg.Equals("--dual", StringComparison.OrdinalIgnoreCase)) { initialRoute = "/dual"; roleChosen = true; }
+                else if (arg.Equals("--board", StringComparison.OrdinalIgnoreCase)) { initialRoute = "/board"; roleChosen = true; }
+                else if (arg.Equals("--choose", StringComparison.OrdinalIgnoreCase)) { initialRoute = ""; roleChosen = true; }
                 else if (arg.Equals("--tray", StringComparison.OrdinalIgnoreCase)) startInTray = true;
+            }
+
+            // Default launch: open the nurse login straight away and keep the
+            // chooser hub in the tray; use --choose to re-enable chooser mode.
+            if (!roleChosen)
+            {
+                initialRoute = "/nurse?fresh=1";
+                startInTray = true;
             }
 
             Application.Run(new RoleChooserForm(initialRoute, startInTray));
@@ -413,9 +422,15 @@ namespace IntubaTalk
         private GraphicsPath GetRoundedPath(Rectangle r, int rad)
         {
             GraphicsPath gp = new GraphicsPath();
-            int d = rad * 2;
-            if (d > r.Width) d = r.Width;
-            if (d > r.Height) d = r.Height;
+            if (r.Width <= 0 || r.Height <= 0) return gp;
+
+            int d = Math.Min(Math.Max(0, rad * 2), Math.Min(r.Width, r.Height));
+            if (d < 2)
+            {
+                gp.AddRectangle(r);
+                return gp;
+            }
+
             gp.AddArc(r.X, r.Y, d, d, 180, 90);
             gp.AddArc(r.Right - d, r.Y, d, d, 270, 90);
             gp.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
@@ -437,6 +452,10 @@ namespace IntubaTalk
         // transparent BackColor.
         private void ApplyRoundedRegion()
         {
+            // Docking and table layout can briefly assign an empty size while
+            // controls are being arranged. Keep the last region until bounds
+            // are usable instead of passing zero-sized arcs to GDI+.
+            if (Width <= 0 || Height <= 0) return;
             if (_lastRadius == Radius && Region != null) return;
             _lastRadius = Radius;
             Rectangle rr = new Rectangle(0, 0, Width, Height);
@@ -456,6 +475,12 @@ namespace IntubaTalk
 
         protected override void OnPaint(PaintEventArgs e)
         {
+            if (Width <= 2 || Height <= 5)
+            {
+                base.OnPaint(e);
+                return;
+            }
+
             ApplyRoundedRegion();
 
             Graphics g = e.Graphics;
