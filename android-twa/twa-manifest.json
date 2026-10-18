@@ -20,8 +20,8 @@
     "path": "C:\\Users\\USER\\.intubatalk\\android-release.keystore",
     "alias": "android"
   },
-  "appVersionName": "1.0.3",
-  "appVersionCode": 5,
+  "appVersionName": "1.0.4",
+  "appVersionCode": 6,
   "shortcuts": [
     {
       "name": "Patient tablet",
@@ -63,5 +63,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1.0.3"
+  "appVersion": "1.0.4"
 }

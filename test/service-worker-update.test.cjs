@@ -6,9 +6,10 @@ const path = require('node:path');
 const sw = fs.readFileSync(path.join(__dirname, '../public/sw.js'), 'utf8');
 const patientShell = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
 const nurseShell = fs.readFileSync(path.join(__dirname, '../public/nurse.html'), 'utf8');
+const feedback = fs.readFileSync(path.join(__dirname, '../public/js/lib/feedback.js'), 'utf8');
 
 test('service worker activates even if Access redirects prevent some shell assets from caching', () => {
-  assert.match(sw, /const CACHE = "intubatalk-v29"/);
+  assert.match(sw, /const CACHE = "intubatalk-v30"/);
   assert.match(sw, /Promise\.allSettled\(SHELL\.map/);
   assert.match(sw, /redirect:\s*"manual"/);
   assert.match(sw, /await self\.skipWaiting\(\)/);
@@ -25,4 +26,10 @@ test('patient and nurse shells refresh when a new service worker takes control',
     assert.match(html, /controllerchange/);
     assert.match(html, /updateViaCache:\s*"none"/);
   }
+});
+
+test('authentication banner offers a user-triggered reauthentication retry', () => {
+  assert.match(feedback, /id="connSignIn"/);
+  assert.match(feedback, /querySelector\("#connSignIn"\)/);
+  assert.match(feedback, /location\.reload\(\)/);
 });

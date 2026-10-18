@@ -1,16 +1,18 @@
-export function classifyApiResponse(response, appOrigin) {
-  if (response.type === 'opaqueredirect') return 'auth';
-  if (!response.ok) return 'offline';
-  if (response.redirected) {
-    try {
-      if (new URL(response.url).origin !== appOrigin) return 'auth';
-    } catch { return 'auth'; }
-  }
-  return response.contentType?.includes('application/json') ? 'live' : 'offline';
+export function classifyApiResponse(response) {
+  if (response.type === 'opaqueredirect' || response.redirected || isAuthenticationResponse(response)) return 'auth';
+  if (!response.ok) return response.status > 0 ? 'service' : 'offline';
+  if (response.status <= 0) return 'offline';
+  return response.contentType?.includes('application/json') ? 'live' : 'service';
 }
 
-export function classifyConnectivityProbe(responseReceived) {
-  return responseReceived ? 'service' : 'offline';
+export function classifyConnectivityProbe(response) {
+  if (!response) return 'offline';
+  if (response.type === 'opaqueredirect' || response.redirected || isAuthenticationResponse(response)) return 'auth';
+  return response.ok || response.status > 0 ? 'service' : 'offline';
+}
+
+function isAuthenticationResponse(response) {
+  return (response.status >= 300 && response.status < 400) || response.status === 401 || response.status === 403;
 }
 
 export function normalizeConnectionState(state) {

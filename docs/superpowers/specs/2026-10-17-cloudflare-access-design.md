@@ -2,11 +2,11 @@
 
 **Date:** 2026-10-17  
 **Status:** Design and implementation plan approved
-**Scope:** Protect the shared Cloudflare-hosted app before enabling cross-network use.
+**Scope:** Protect the shared Cloudflare-hosted app before enabling cross-network use, while allowing the non-sensitive service-worker script to refresh expired clients.
 
 ## 1. Goal
 
-Require staff identity authentication before either the patient or nurse Cloud dashboard, its static files, or its API can be accessed. After sign-in, preserve the current patient room-code workflow and the shared Worker + D1 synchronization so a nurse on another network receives patient alerts and can acknowledge them.
+Require staff identity authentication before either the patient or nurse Cloud dashboard, its app shell, or its API can be accessed. The static `/sw.js` source is the sole public exception so a cached client can refresh its service worker and reach the Access sign-in flow after an expired session. After sign-in, preserve the current patient room-code workflow and the shared Worker + D1 synchronization so a nurse on another network receives patient alerts and can acknowledge them.
 
 Local/LAN mode remains a separate option and is not routed through Cloudflare Access. It is limited to devices that can reach the local host and must remain documented as a trusted-network prototype, not a secure clinical deployment.
 
@@ -19,10 +19,12 @@ Use email one-time PIN authentication with an explicit allowlist of individual s
 - <https://developers.cloudflare.com/workers/configuration/cloudflare-access/>
 - <https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/one-time-pin/>
 
+Use an exact-path public Access application for `/sw.js`, following the existing exact-path exceptions for non-sensitive install metadata and icons. Cloudflare applies a matching hostname/path application before Worker-level Access. The service-worker script contains no patient data or authentication material; app navigation, sensitive static assets, and every API route stay protected.
+
 ## 3. User Flow
 
-1. On each device, the user opens the same Cloud HTTPS app origin.
-2. Cloudflare Access requires the user to authenticate with an allowlisted staff email before any app or API request reaches the Worker.
+1. On each device, the user opens the same Cloud HTTPS app origin; the public service-worker script may refresh independently.
+2. Cloudflare Access requires the user to authenticate with an allowlisted staff email before any app shell or API request reaches the Worker.
 3. After authentication, the patient dashboard creates or displays its existing four-digit room code.
 4. The nurse authenticates separately on the nurse device and enters the patient room code.
 5. Patient alerts, acknowledgements, presence, and profiles continue through the shared D1-backed API.
@@ -35,6 +37,7 @@ The room code remains a pairing identifier. It is no longer the only barrier to 
 - Create/enable the Cloudflare Zero Trust organization and email OTP identity provider if they are not already configured.
 - Create an Access application for the exact INTUBATALK Worker/hostname and allow only explicitly approved email addresses.
 - Protect the `workers.dev` release hostname and the Worker itself so preview or alternate hostnames cannot bypass the gate.
+- Add an exact-path bypass only for `/sw.js`; do not broaden the existing public install-metadata exceptions.
 - Confirm an unapproved visitor is blocked and an approved user can complete OTP authentication before deploying the app Worker and public assets.
 - Never deploy the application unprotected as an intermediate step. If Cloudflare cannot attach Access to the selected Worker before upload, use a hostname-based Access application for the reserved `workers.dev` hostname first and confirm it is active before deployment.
 - Do not publish the Worker or assets until the Access gate and allowlist have been verified. Publishing remains a separate release action.
@@ -46,6 +49,8 @@ Cloudflare Access does not protect the bundled Node server. Local/LAN mode remai
 ## 6. Failure Behavior
 
 - If Access blocks a request, the browser displays Cloudflare's sign-in/block flow; the app must not silently switch to Local/LAN.
+- If an API response is an Access redirect, show an authentication state with an explicit sign-in retry instead of reporting Wi-Fi loss. Keep the current room and queued alerts on the device.
+- The exact public `/sw.js` route must remain reachable so expired mobile/desktop clients can receive service-worker updates; no app shell or data API may inherit this bypass.
 - If an approved email is not in the allowlist, Access denies it and does not issue an OTP.
 - If the Worker/D1 service is unavailable after authentication, the existing app connection state reports offline/reconnecting; requests remain in the existing retry outbox.
 - An expired Access session requires reauthentication; app-level room codes and client state remain unchanged.
@@ -54,7 +59,7 @@ Cloudflare Access does not protect the bundled Node server. Local/LAN mode remai
 
 - A non-allowlisted email cannot authenticate.
 - An allowlisted email receives and completes the OTP flow on Windows, Android TWA, iPhone/iPad Safari/PWA, and desktop browsers.
-- Requests without a valid Access session cannot load the app, call any API route, or reach D1-backed room data.
+- Requests without a valid Access session cannot load patient/nurse app pages, call any API route, or reach D1-backed room data; only the non-sensitive `/sw.js` source is public.
 - Two independently authenticated devices on different networks can pair with the same room code; a patient alert appears on the nurse device and the nurse acknowledgement appears on the patient device.
 - A different room code cannot retrieve the alert.
 - Cloudflare Access expiry prompts reauthentication and does not reset or lose an already active room session after sign-in.

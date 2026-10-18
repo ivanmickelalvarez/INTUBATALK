@@ -334,6 +334,8 @@ dialog::backdrop { background: rgba(52, 62, 66, .45); backdrop-filter: blur(3px)
 }
 .conn-banner[data-state="offline"] { color: #8c3030; background: linear-gradient(145deg, #fbe4e4, #f7d6d6); }
 .conn-banner-icon { width: 15px; height: 15px; flex: none; }
+.conn-banner-action { border: 0; border-radius: 999px; padding: 5px 11px; color: #235f55; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.conn-banner-action:hover { background: #e9f5f1; }
 .conn-banner--leaving { opacity: 0; transition: opacity .3s ease; }
 
 /* ---------- App splash / loading screen ---------- */

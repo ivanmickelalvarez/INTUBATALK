@@ -57,8 +57,8 @@ android {
         applicationId "com.intubatalk.mobile"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 5
-        versionName "1.0.3"
+        versionCode 6
+        versionName "1.0.4"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name

@@ -85,7 +85,9 @@ export function setConnectionState(state) { // "offline" | "reconnecting" | "aut
   connEl.dataset.state = state;
   connEl.innerHTML =
     `<span class="conn-banner-icon ${icon === 'spinner' ? 'btn-spinner' : ''}" aria-hidden="true"></span>` +
-    `<span>${label}</span>`;
+    `<span>${label}</span>` +
+    (state === "auth" ? `<button id="connSignIn" class="conn-banner-action" type="button">Sign in</button>` : "");
+  connEl.querySelector("#connSignIn")?.addEventListener("click", () => window.location.reload());
 }
 
 /* ------------------------------------------------------- network errors */

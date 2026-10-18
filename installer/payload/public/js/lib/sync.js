@@ -47,11 +47,12 @@ const post = (path, body) =>
   }).then((response) => {
     const state = classifyApiResponse({
       ok: response.ok,
+      status: response.status,
       type: response.type,
       redirected: response.redirected,
       url: response.url,
       contentType: response.headers.get("content-type"),
-    }, location.origin);
+    });
     if (state !== "live") {
       const error = new Error(`API ${response.status}`);
       error.connectionState = state;
@@ -67,10 +68,18 @@ const post = (path, body) =>
 
 export async function checkConnection() {
   try {
-    await fetch("/manifest.webmanifest?connectivity-check=1", { cache: "no-store" });
-    reportConnection(classifyConnectivityProbe(true));
+    const response = await fetch("/manifest.webmanifest?connectivity-check=1", {
+      cache: "no-store",
+      redirect: "manual",
+    });
+    reportConnection(classifyConnectivityProbe({
+      ok: response.ok,
+      status: response.status,
+      type: response.type,
+      redirected: response.redirected,
+    }));
   } catch {
-    reportConnection(classifyConnectivityProbe(false));
+    reportConnection(classifyConnectivityProbe(null));
   }
 }
 
@@ -283,11 +292,12 @@ async function pollOnce() {
     const r = await fetch(`/api/poll?rooms=${encodeURIComponent(query)}&after=${after}`, { redirect: "manual" });
     const state = classifyApiResponse({
       ok: r.ok,
+      status: r.status,
       type: r.type,
       redirected: r.redirected,
       url: r.url,
       contentType: r.headers.get("content-type"),
-    }, location.origin);
+    });
     if (state !== "live") { reportConnection(state); return; }
     const data = await r.json();
     reportConnection("live");
