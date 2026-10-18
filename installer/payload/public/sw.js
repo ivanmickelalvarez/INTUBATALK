@@ -1,16 +1,26 @@
 // INTUBATALK service worker — offline-first app shell.
 // API calls are network-only (data freshness matters); everything else is cached.
-const CACHE = "intubatalk-v24";
+const CACHE = "intubatalk-v29";
 const SHELL = [
   "/", "/choose", "/nurse", "/board", "/dual", "/privacy", "/guidelines", "/404.html", "/manifest.webmanifest",
   "/css/base.css", "/css/patient.css", "/css/nurse.css",
   "/js/patient.js", "/js/nurse.js", "/js/needs.js",
-  "/js/lib/util.js", "/js/lib/audio.js", "/js/lib/tts.js", "/js/lib/sync.js", "/js/lib/icons.js",  "/js/lib/ambient.js", "/js/lib/tilt3d.js", "/js/lib/feedback.js", "/js/lib/blink-detector.mjs",
+  "/js/lib/util.js", "/js/lib/audio.js", "/js/lib/tts.js", "/js/lib/sync.js", "/js/lib/connection-state.mjs", "/js/lib/icons.js",  "/js/lib/ambient.js", "/js/lib/tilt3d.js", "/js/lib/feedback.js", "/js/lib/blink-detector.mjs",
   "/icons/icon.svg", "/icons/icon-512.png", "/icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.allSettled(SHELL.map(async (path) => {
+      const request = new Request(new URL(path, self.location.origin), { cache: "reload" });
+      const response = await fetch(request, { redirect: "manual" });
+      if (response.ok && response.type !== "opaqueredirect" && !response.redirected) {
+        await cache.put(request, response);
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", (e) => {
@@ -25,6 +35,22 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
   if (url.pathname.startsWith("/api/")) return; // live data, no cache
+  if (url.pathname === "/manifest.webmanifest" && url.searchParams.has("connectivity-check")) return;
+
+  if (e.request.mode === "navigate") {
+    e.respondWith((async () => {
+      try {
+        const response = await fetch(e.request);
+        if (response.ok && !response.redirected) {
+          caches.open(CACHE).then((cache) => cache.put(e.request, response.clone()));
+        }
+        return response;
+      } catch {
+        return (await caches.match(e.request)) || (await caches.match("/")) || Response.error();
+      }
+    })());
+    return;
+  }
 
   // New pages added later must not be cached as irreversible app-shell pins.
   // Stale-while-revalidate, with a document fallback: when a navigated page was

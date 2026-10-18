@@ -3,6 +3,7 @@ import { $, $$, esc } from "./lib/util.js";
 import * as audio from "./lib/audio.js";
 import { speak, stopSpeech } from "./lib/tts.js";
 import * as sync from "./lib/sync.js";
+import { normalizeConnectionState } from "./lib/connection-state.mjs";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
 import { startTilt } from "./lib/tilt3d.js"; // gentle tilt kept on the gate card only
@@ -872,10 +873,10 @@ requestAnimationFrame(() => document.documentElement.classList.remove("app-booti
 
 // Connection banner: react to poll success/failure while the tablet is live.
 sync.on("connection", (ok) => {
-  setConnectionState(ok ? "live" : "offline");
+  setConnectionState(normalizeConnectionState(ok));
 });
 window.addEventListener("online", () => { /* next poll (≤1.5s) confirms and clears */ });
-window.addEventListener("offline", () => setConnectionState("offline"));
+window.addEventListener("offline", () => sync.checkConnection());
 $( "#gateForm" ).addEventListener("submit", (e) => {
   e.preventDefault();
   withButtonLoading($("#btnCreate"), startSession(), "Starting…");

@@ -102,7 +102,10 @@
 
 <script>
 if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+  addEventListener("load", () => {
+    navigator.serviceWorker.addEventListener("controllerchange", () => location.reload(), { once: true });
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => registration.update()).catch(() => {});
+  });
 }
 </script>
 <script type="module" src="/js/patient.js"></script>

@@ -7,6 +7,7 @@ import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
 import { attach as attachTilt } from "./lib/tilt3d.js";
 import * as sync from "./lib/sync.js";
+import { normalizeConnectionState } from "./lib/connection-state.mjs";
 import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS } from "./needs.js";
 
@@ -1310,6 +1311,6 @@ document.querySelectorAll(".n-app").forEach((el) => el.classList.add("app-fade")
 requestAnimationFrame(() => document.documentElement.classList.remove("app-booting"));
 
 // Connection banner: react to poll success/failure while the dashboard is live.
-sync.on("connection", (ok) => setConnectionState(ok ? "live" : "offline"));
-window.addEventListener("offline", () => setConnectionState("offline"));
+sync.on("connection", (ok) => setConnectionState(normalizeConnectionState(ok)));
+window.addEventListener("offline", () => sync.checkConnection());
 window.addEventListener("online", () => { /* next poll (≤1.5s) confirms and clears */ });

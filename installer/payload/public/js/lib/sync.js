@@ -3,6 +3,7 @@
 // Fallback: BroadcastChannel between tabs in ONE browser, so a single
 // laptop can demo patient ↔ nurse with no network at all.
 import { uid } from "./util.js";
+import { classifyApiResponse, classifyConnectivityProbe } from "./connection-state.mjs";
 
 const LS_ROOM = "it_room";
 const LS_OUTBOX = "it_outbox";
@@ -40,16 +41,38 @@ const notifyConnection = (ok) => reportConnection(ok);
 const post = (path, body) =>
   fetch(`/api${path}`, {
     method: "POST",
+    redirect: "manual",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   }).then((response) => {
-    if (!response.ok) throw new Error(`API ${response.status}`);
-    notifyConnection(true);
+    const state = classifyApiResponse({
+      ok: response.ok,
+      type: response.type,
+      redirected: response.redirected,
+      url: response.url,
+      contentType: response.headers.get("content-type"),
+    }, location.origin);
+    if (state !== "live") {
+      const error = new Error(`API ${response.status}`);
+      error.connectionState = state;
+      throw error;
+    }
+    notifyConnection("live");
     return response;
   }).catch((error) => {
-    notifyConnection(false);
+    if (error.connectionState) notifyConnection(error.connectionState);
+    else checkConnection();
     throw error;
   });
+
+export async function checkConnection() {
+  try {
+    await fetch("/manifest.webmanifest?connectivity-check=1", { cache: "no-store" });
+    reportConnection(classifyConnectivityProbe(true));
+  } catch {
+    reportConnection(classifyConnectivityProbe(false));
+  }
+}
 
 const queuePost = (path, body, key = `${path}:${body.cmid || Date.now()}`) => {
   const existing = outbox.find((item) => item.key === key);
@@ -257,10 +280,17 @@ async function pollOnce() {
   if (!activeRooms.length) return;
   try {
     const query = activeRooms.join(",");
-    const r = await fetch(`/api/poll?rooms=${encodeURIComponent(query)}&after=${after}`);
-    if (!r.ok) { reportConnection(false); return; }
+    const r = await fetch(`/api/poll?rooms=${encodeURIComponent(query)}&after=${after}`, { redirect: "manual" });
+    const state = classifyApiResponse({
+      ok: r.ok,
+      type: r.type,
+      redirected: r.redirected,
+      url: r.url,
+      contentType: r.headers.get("content-type"),
+    }, location.origin);
+    if (state !== "live") { reportConnection(state); return; }
     const data = await r.json();
-    reportConnection(true);
+    reportConnection("live");
     for (const m of data.messages || []) {
       after = Math.max(after, m.id);
       const cmid = m.cmid || `s${m.id}`;
@@ -282,13 +312,13 @@ async function pollOnce() {
     if (data.profiles) dispatch({ type: "profiles", profiles: data.profiles, ts: data.now });
     if (data.profile) dispatch({ type: "profile", profile: data.profile, caps: data.caps || [], ts: data.now });
     flushOutbox();
-  } catch { /* offline — keep trying */ reportConnection(false); }
+  } catch { /* offline — keep trying */ checkConnection(); }
 }
 
 // Connection state derived from poll results (online iff last attempt succeeded).
 let connState = null; // null | "online" | "offline"
 function reportConnection(ok) {
-  const next = ok ? "online" : "offline";
+  const next = ok === true ? "live" : ok === false ? "offline" : ok;
   if (next === connState) return;
   connState = next;
   handlers.connection.forEach((f) => { try { f(ok); } catch { /* listener bug */ } });
@@ -306,5 +336,5 @@ function startPolling() {
   }, 120000);
 }
 
-window.addEventListener("online", () => { reportConnection(false); flushOutbox(); pollOnce(); });
-window.addEventListener("offline", () => reportConnection(false));
+window.addEventListener("online", () => { checkConnection(); flushOutbox(); pollOnce(); });
+window.addEventListener("offline", checkConnection);

@@ -50,7 +50,7 @@ let connState = null;
 
 // Slim banner pinned to the top: offline / reconnecting / live.
 // Only shows when there is something to say (never renders "live").
-export function setConnectionState(state) { // "offline" | "reconnecting" | "live"
+export function setConnectionState(state) { // "offline" | "reconnecting" | "auth" | "live"
   if (state === connState) return;
   connState = state;
 
@@ -66,10 +66,12 @@ export function setConnectionState(state) { // "offline" | "reconnecting" | "liv
 
   const label =
     state === "offline" ? "Wi-Fi or network is off — requests are saved and will send when back online" :
+    state === "auth" ? "Sign in to the shared app to reconnect" :
+    state === "service" ? "Network is available, but the shared service needs sign-in or recovery" :
     state === "reconnecting" ? "Reconnecting to the nurse dashboard…" :
     "Live connection restored";
   const icon =
-    state === "offline" ? "wifi-off" :
+    state === "offline" || state === "auth" ? "wifi-off" :
     state === "reconnecting" ? "spinner" : "wifi";
 
   if (!connEl) {
