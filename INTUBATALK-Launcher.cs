@@ -22,8 +22,8 @@ using System.Reflection;
 [assembly: AssemblyTitle("INTUBATALK")]
 [assembly: AssemblyDescription("Adaptive communication system for intubated ICU patients. Desktop hub with patient tablet, nurse dashboard, dual simulator and printable backup board.")]
 [assembly: AssemblyProduct("INTUBATALK ICU System")]
-[assembly: AssemblyVersion("2.3.0.0")]
-[assembly: AssemblyFileVersion("2.3.0.0")]
+[assembly: AssemblyVersion("2.4.0.0")]
+[assembly: AssemblyFileVersion("2.4.0.0")]
 
 namespace IntubaTalk
 {
@@ -38,6 +38,13 @@ namespace IntubaTalk
             string initialRoute = "";
             bool roleChosen = false;
             bool startInTray = false;
+            AppMode mode;
+            try { mode = LauncherMode.ParseMode(args); }
+            catch (ArgumentException ex)
+            {
+                MessageBox.Show(ex.Message, "INTUBATALK launch mode", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             foreach (string arg in args)
             {
@@ -57,7 +64,7 @@ namespace IntubaTalk
                 startInTray = true;
             }
 
-            Application.Run(new RoleChooserForm(initialRoute, startInTray));
+            Application.Run(new RoleChooserForm(initialRoute, startInTray, mode));
         }
     }
 
@@ -613,6 +620,9 @@ namespace IntubaTalk
         private System.Windows.Forms.Timer healthTimer;
         private string appDir;
         private Icon customIcon;
+        private AppMode mode;
+        private string cloudOrigin;
+        private ClayPillButton btnMode;
 
         // Clinical Claymorphism palette
         private readonly Color colBg      = Color.FromArgb(248, 249, 250);  // Warm hospital beige (matching #f8f9fa)
@@ -625,9 +635,11 @@ namespace IntubaTalk
         private readonly Color colTeal    = Color.FromArgb(32, 112, 144);   // Nurse teal (matching #32709c)
         private readonly Color colTealDk  = Color.FromArgb(47, 101, 136);   // Nurse dark teal
 
-        public RoleChooserForm(string initialRoute, bool startInTray)
+        public RoleChooserForm(string initialRoute, bool startInTray, AppMode initialMode)
         {
             appDir = AppDomain.CurrentDomain.BaseDirectory;
+            mode = initialMode;
+            cloudOrigin = ReadCloudOrigin();
 
             // Load app icon
             string icoPath = Path.Combine(appDir, "app.ico");
@@ -643,7 +655,7 @@ namespace IntubaTalk
             healthTimer = new System.Windows.Forms.Timer();
             healthTimer.Interval = 2500;
             healthTimer.Tick += delegate { CheckServerStatus(); };
-            healthTimer.Start();
+            if (mode == AppMode.Local) healthTimer.Start();
 
             if (!string.IsNullOrEmpty(initialRoute))
             {
@@ -912,10 +924,14 @@ namespace IntubaTalk
             btnBoard.Click += delegate { LaunchApp("/board"); };
             ClayPillButton btnWifi = new ClayPillButton { Text = "🌐 Wi-Fi Link", Width = 115 };
             btnWifi.Click += delegate { CopyLanUrl(); };
+            btnMode = new ClayPillButton { Width = 155 };
+            btnMode.Click += delegate { ToggleMode(); };
+            UpdateModeButton();
 
             flowLeft.Controls.Add(btnDual);
             flowLeft.Controls.Add(btnBoard);
             flowLeft.Controls.Add(btnWifi);
+            flowLeft.Controls.Add(btnMode);
 
             FlowLayoutPanel flowRight = new FlowLayoutPanel
             {
@@ -952,6 +968,8 @@ namespace IntubaTalk
             trayMenu.Items.Add("🔒 Privacy & Data Handling", null, delegate { LaunchApp("/privacy"); });
             trayMenu.Items.Add("📖 Usage Guidelines", null, delegate { LaunchApp("/guidelines"); });
             trayMenu.Items.Add("-");
+            trayMenu.Items.Add("Use Cloud Shared Mode", null, delegate { SetMode(AppMode.Cloud); });
+            trayMenu.Items.Add("Use Local/LAN Mode", null, delegate { SetMode(AppMode.Local); });
             trayMenu.Items.Add("Open Role Chooser Hub", null, delegate { RestoreFromTray(); });
             trayMenu.Items.Add("Copy Bedside Wi-Fi URL", null, delegate { CopyLanUrl(); });
             trayMenu.Items.Add("-");
@@ -980,6 +998,12 @@ namespace IntubaTalk
         // ─────────────────────────────────────────────────────────
         private void StartServerIfNeeded()
         {
+            if (mode != AppMode.Local)
+            {
+                UpdateModeStatus();
+                return;
+            }
+
             if (IsServerAnswering(serverPort))
             {
                 lblStatus.Text = "● Server Online (Port " + serverPort + ")";
@@ -1044,6 +1068,11 @@ namespace IntubaTalk
 
         private void CheckServerStatus()
         {
+            if (mode == AppMode.Cloud)
+            {
+                UpdateModeStatus();
+                return;
+            }
             bool ok = IsServerAnswering(serverPort);
             if (ok)
             {
@@ -1077,7 +1106,28 @@ namespace IntubaTalk
         // ─────────────────────────────────────────────────────────
         private void LaunchApp(string route)
         {
-            string url = "http://127.0.0.1:" + serverPort + route;
+            Uri target;
+            try
+            {
+                target = LauncherMode.BuildTargetUri(mode, cloudOrigin, serverPort, route);
+                if (mode == AppMode.Cloud && !IsCloudOriginAvailable())
+                {
+                    MessageBox.Show(
+                        "INTUBATALK Cloud is unavailable at " + cloudOrigin + ". Check the internet connection and the configured shared service, then try again. Switch to Local/LAN only if you intend to use this computer's separate local data.",
+                        "INTUBATALK Cloud unavailable",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Cloud mode is selected, but its shared HTTPS origin is not configured. Add one valid HTTPS origin on a single line in app-origin.txt beside INTUBATALK.exe, then restart the app.\n\n" + ex.Message,
+                    "INTUBATALK Cloud Mode",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            string url = target.AbsoluteUri;
 
             string edgePath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
@@ -1122,8 +1172,35 @@ namespace IntubaTalk
             }
         }
 
+        private bool IsCloudOriginAvailable()
+        {
+            try
+            {
+                Uri probeUri = LauncherMode.BuildCloudProbeUri(cloudOrigin);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(probeUri);
+                request.Method = "GET";
+                request.Timeout = 5000;
+                request.ReadWriteTimeout = 5000;
+                request.AllowAutoRedirect = false;
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                    return LauncherMode.IsCloudProbeStatusReachable((int)response.StatusCode);
+            }
+            catch (WebException ex)
+            {
+                using (HttpWebResponse response = ex.Response as HttpWebResponse)
+                    return response != null && LauncherMode.IsCloudProbeStatusReachable((int)response.StatusCode);
+            }
+            catch { return false; }
+        }
+
         private void CopyLanUrl()
         {
+            if (mode != AppMode.Local)
+            {
+                MessageBox.Show("Bedside Wi-Fi links are available in Local/LAN mode. Select ‘Switch to Local/LAN’ first.",
+                    "Local/LAN mode required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             string lanIp = GetLocalIpAddress();
             string url = "http://" + lanIp + ":" + serverPort + "/";
             Clipboard.SetText(url);
@@ -1132,6 +1209,65 @@ namespace IntubaTalk
                 "\n\nOpen this link on any iPad, tablet, or phone connected to the same Wi-Fi network to use INTUBATALK at the bedside.",
                 "Bedside Wi-Fi Connection",
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private string ReadCloudOrigin()
+        {
+            string originFile = Path.Combine(appDir, "app-origin.txt");
+            if (!File.Exists(originFile)) return null;
+            string[] lines = File.ReadAllLines(originFile);
+            if (lines.Length != 1 || String.IsNullOrWhiteSpace(lines[0])) return null;
+            try
+            {
+                LauncherMode.BuildTargetUri(AppMode.Cloud, lines[0].Trim(), serverPort, "/");
+                return lines[0].Trim();
+            }
+            catch { return null; }
+        }
+
+        private void UpdateModeButton()
+        {
+            if (btnMode != null) btnMode.Text = mode == AppMode.Cloud ? "☁ Cloud · Switch to Local" : "🏠 Local/LAN · Switch to Cloud";
+        }
+
+        private void UpdateModeStatus()
+        {
+            if (lblStatus == null) return;
+            if (mode == AppMode.Cloud)
+            {
+                lblStatus.Text = cloudOrigin == null ? "● Cloud origin not configured" : "● Cloud · Shared service";
+                lblStatus.ForeColor = cloudOrigin == null ? Color.Red : colTeal;
+            }
+            else
+            {
+                bool ok = IsServerAnswering(serverPort);
+                lblStatus.Text = ok ? "● Local server online (Port " + serverPort + ")" : "● Local server offline";
+                lblStatus.ForeColor = ok ? Color.ForestGreen : Color.Red;
+            }
+        }
+
+        private void ToggleMode()
+        {
+            SetMode(mode == AppMode.Cloud ? AppMode.Local : AppMode.Cloud);
+        }
+
+        private void SetMode(AppMode nextMode)
+        {
+            if (mode == nextMode) return;
+            if (nextMode == AppMode.Cloud && ownsServer && serverProcess != null && !serverProcess.HasExited)
+            {
+                try { serverProcess.Kill(); } catch { }
+                serverProcess = null;
+                ownsServer = false;
+            }
+            mode = nextMode;
+            UpdateModeButton();
+            if (healthTimer != null)
+            {
+                if (mode == AppMode.Local) healthTimer.Start();
+                else healthTimer.Stop();
+            }
+            StartServerIfNeeded();
         }
 
         private void ShowHelp()
@@ -1157,6 +1293,11 @@ namespace IntubaTalk
 
         private void RestartServer()
         {
+            if (mode != AppMode.Local)
+            {
+                MessageBox.Show("The bundled server starts only in Local/LAN mode.", "Cloud mode is active", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             if (serverProcess != null && !serverProcess.HasExited)
             {
                 try { serverProcess.Kill(); } catch { }

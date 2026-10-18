@@ -7,6 +7,7 @@
 <meta name="color-scheme" content="light">
 <title>INTUBATALK · Dual Interactive Simulator</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,600;0,700;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -91,11 +92,11 @@ iframe {
 <main class="dual-split">
   <div class="pane-wrap">
     <div class="pane-hdr">PATIENT TABLET (TOUCH / VOICE / TILES)</div>
-    <iframe id="framePatient" src="/" title="Patient Tablet"></iframe>
+    <iframe id="framePatient" src="/" title="Patient Tablet" allow="camera; microphone"></iframe>
   </div>
   <div class="pane-wrap">
     <div class="pane-hdr">NURSE STATION (REAL-TIME ALERTS & LOG)</div>
-    <iframe id="frameNurse" src="/nurse" title="Nurse Dashboard"></iframe>
+    <iframe id="frameNurse" src="/nurse" title="Nurse Dashboard" allow="camera; microphone"></iframe>
   </div>
 </main>
 

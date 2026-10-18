@@ -8,8 +8,8 @@
 <meta name="color-scheme" content="light">
 <title>INTUBATALK · Patient Tablet</title>
 <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/icons/icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Lora:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -58,24 +58,43 @@
 
 <section id="app" class="p-app hidden" aria-live="polite">
   <header class="p-top">
-    <div class="brand">
+    <div class="p-top-brand">
       <div class="brand-mark" id="topMark" aria-hidden="true"></div>
-      <div>
+      <div class="p-top-id">
         <p class="brand-name" id="topName">Patient</p>
-        <span class="badge" id="topRoom" style="margin-top:2px">Room code · bed</span>
+        <span class="p-room" id="topRoom">Room code · bed</span>
       </div>
+      <span id="capsChips" style="display:contents"></span>
     </div>
     <div class="p-status">
-      <span id="capsChips" style="display:contents"></span>
-      <button class="btn btn-ghost btn-sm" id="btnDial"><span data-ic="bell"></span>Call nurse</button>
-      <button class="btn btn-ghost btn-sm" id="btnCapsTop"><span data-ic="abilities"></span>Abilities</button>
-      <button class="btn btn-ghost btn-sm" id="btnBoard"><span data-ic="board"></span>Board</button>
-      <button class="btn btn-ghost btn-sm" id="btnStartOver" title="Start a fresh session from the beginning"><span data-ic="repeat"></span>Start over</button>
+      <button class="btn btn-sm p-act" id="btnDial"><span data-ic="bell"></span>Call nurse</button>
+      <button class="btn btn-sm p-act" id="btnCapsTop"><span data-ic="abilities"></span>Abilities</button>
+      <button class="btn btn-sm p-act" id="btnBoard"><span data-ic="board"></span>Board</button>
+      <button class="btn btn-sm p-act p-act--quiet" id="btnStartOver" title="Start a fresh session from the beginning"><span data-ic="repeat"></span>Start over</button>
     </div>
   </header>
 
   <div class="p-main" id="mainHome">
-    <div class="tiles" id="homeGrid" role="group" aria-label="Needs"></div>
+    <div class="p-greet">
+      <h1 class="p-greet-name" id="greetName">Hello</h1>
+      <p class="p-greet-sub">Tap a tile below to tell your nurse what you need.</p>
+    </div>
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-flag p-section-flag--red"></span>
+        <h2>Urgent needs</h2>
+        <p>The nurse sees these with a priority alarm</p>
+      </div>
+      <div class="tiles" id="gridUrgent" role="group" aria-label="Urgent needs"></div>
+    </div>
+    <div class="p-section">
+      <div class="p-section-head">
+        <span class="p-section-flag p-section-flag--teal"></span>
+        <h2>Comfort &amp; communicate</h2>
+        <p>Everyday requests and the spelling tools</p>
+      </div>
+      <div class="tiles" id="gridComfort" role="group" aria-label="Comfort and communication"></div>
+    </div>
   </div>
 
   <div class="p-panel hidden" id="panel"></div>

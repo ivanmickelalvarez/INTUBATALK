@@ -1,9 +1,9 @@
-; INTUBATALK 2.2 — Windows installer script (Inno Setup 6)
+; INTUBATALK 2.4 — Windows installer script (Inno Setup 6)
 ; Installs the desktop launcher, the embedded Node.js runtime and the web app.
 ; Per-machine install to Program Files, with Start Menu shortcut and uninstaller.
 
 #define AppName "INTUBATALK"
-#define AppVersion "2.3.0"
+#define AppVersion "2.4.0"
 #define AppPublisher "INTUBATALK ICU System"
 #define AppExeName "INTUBATALK.exe"
 
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 OutputDir=.
-OutputBaseFilename=INTUBATALK-Setup-2.3.0
+OutputBaseFilename=INTUBATALK-Setup-2.4.0
 SetupIconFile=..\app.ico
 Compression=lzma2/max
 SolidCompression=yes
@@ -37,6 +37,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "..\installer\payload\INTUBATALK.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\installer\payload\runtime\node.exe"; DestDir: "{app}\runtime"; Flags: ignoreversion
 Source: "..\installer\payload\server.js"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\installer\payload\app-origin.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\installer\payload\public\*"; DestDir: "{app}\public"; Flags: ignoreversion recursesubdirs
 Source: "..\app.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "stop-server.cmd"; DestDir: "{app}"; Flags: ignoreversion
@@ -45,6 +46,7 @@ Source: "stop-server.cmd"; DestDir: "{app}"; Flags: ignoreversion
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{group}\{#AppName} Patient Tablet"; Filename: "{app}\{#AppExeName}"; Parameters: "--patient"
 Name: "{group}\{#AppName} Nurse Dashboard"; Filename: "{app}\{#AppExeName}"; Parameters: "--nurse"
+Name: "{group}\{#AppName} Local LAN Mode"; Filename: "{app}\{#AppExeName}"; Parameters: "--local --choose"
 Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 

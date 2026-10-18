@@ -14,6 +14,14 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/.well-known/assetlinks.json") {
+      // Android App Link verification file (TWA). Kept out of the static asset
+      // directory because deploy rejects hidden paths — served inline instead.
+      if (ASSET_LINKS) return new Response(ASSET_LINKS, {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=86400" },
+      });
+    }
     if (url.pathname.startsWith("/api/")) return api(request, env, url);
     // Camera: the patient tablet's eye-blink camera assist needs same-origin
     // camera access. Other than that, no sensitive permissions are requested.
@@ -45,6 +53,10 @@ const CSP =
   "connect-src 'self'; " +
   "frame-ancestors 'self'; " +
   "base-uri 'self'; form-action 'self'";
+
+// Android App Link verification (packaged TWA). Injected as a deploy-time
+// variable so the hidden .well-known path never lives in the public assets dir.
+const ASSET_LINKS = `[\n  {\n    "relation": [\n      "delegate_permission/common.handle_all_urls"\n    ],\n    "target": {\n      "namespace": "android_app",\n      "package_name": "com.intubatalk.mobile",\n      "sha256_cert_fingerprints": [\n        "06:1F:D3:F4:2A:7C:FB:18:3D:AE:28:3E:85:37:2E:84:75:9B:BB:79:54:29:7E:40:64:12:7A:A4:94:58:61:04"\n      ]\n    }\n  }\n]`;
 
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",

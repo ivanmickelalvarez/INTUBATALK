@@ -3,6 +3,7 @@
   "name": "intubatalk",
   "main": "worker.js",
   "compatibility_date": "2026-10-01",
+  "preview_urls": false,
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
@@ -12,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "intubatalk",
-      "database_id": "placeholder-local"
+      "database_id": "25c16037-f55f-43d5-a4f8-114ef82a5fed"
     }
   ]
 }

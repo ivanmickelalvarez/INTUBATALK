@@ -919,7 +919,7 @@ function refreshPatientStatusList() {
 
   summary.textContent = total === 0
     ? "No patients yet"
-    : `${total} patient${total === 1 ? "" : "s"} · ${totalUnhandled} open${totalEmg ? ` · ${totalEmg} emergency${totalEmg === 1 ? "" : "s"}` : ""}`;
+    : `${total} patient${total === 1 ? "" : "s"} · ${totalUnhandled} open${totalEmg ? ` · ${totalEmg} emergenc${totalEmg === 1 ? "y" : "ies"}` : ""}`;
 
   const nurseEl = $("#patientStatusNurse");
   if (nurseEl) {

@@ -5,10 +5,11 @@ import { speak, stopSpeech } from "./lib/tts.js";
 import * as sync from "./lib/sync.js";
 import { svg } from "./lib/icons.js";
 import { startAmbient } from "./lib/ambient.js";
-import { attach as attachTilt, startTilt } from "./lib/tilt3d.js"; // 3D tilt for the gate card + tiles
+import { startTilt } from "./lib/tilt3d.js"; // gentle tilt kept on the gate card only
 
 import { removeSplash, withButtonLoading, setConnectionState } from "./lib/feedback.js";
 import { NEEDS, CAPS, CAPS_BY_KEY, DEFAULT_PROFILE } from "./needs.js";
+import { createBlinkDetector, answerForBlinkCount, measureFrameEyeScores } from "./lib/blink-detector.mjs";
 
 // ------------------------------------------------------------------ state
 
@@ -180,13 +181,15 @@ function wireIncoming() {
 
 function renderTop() {
   $("#topName").textContent = profile.name || "Patient";
-  $("#topRoom").innerHTML = `Room code &nbsp;<b>${esc(room || "· · · ·")}</b>${profile.bed ? ` &nbsp;·&nbsp; bed ${esc(profile.bed)}` : ""}`;
+  $("#topRoom").innerHTML = `Room &nbsp;<b>${esc(room || "· · · ·")}</b>${profile.bed ? ` &nbsp;·&nbsp; bed ${esc(profile.bed)}` : ""}`;
   const wrap = $("#capsChips");
   const list = profile.caps || [];
   wrap.innerHTML = list.map((k) => {
     const c = CAPS_BY_KEY[k];
     return c ? `<span class="badge mint">${esc(c.label)}</span>` : "";
   }).join("");
+  const greet = $("#greetName");
+  if (greet) greet.textContent = `Hello, ${(profile.name || "Patient").split(" ")[0]}`;
 }
 
 function wireTopButtons() {
@@ -223,23 +226,28 @@ function saveCustom(list) {
 }
 
 function renderTiles() {
-  const grid = $("#homeGrid");
-  grid.innerHTML = "";
+  const urgent = $("#gridUrgent");
+  const comfort = $("#gridComfort");
+  urgent.innerHTML = "";
+  comfort.innerHTML = "";
   const warns = ["suction", "breathing", "toilet", "pain"];
   const labels = ["emergency", ...Object.keys(NEEDS), ...customKeys().map((c) => `custom:${c}`)];
+  let i = 0;
   for (const key of labels) {
     const def = key === "emergency" ? null : needDef(key);
     const custom = key.startsWith("custom:");
     const label = key === "emergency" ? "Emergency" : custom ? key.slice(7) : (def?.label ?? key);
     const iconName = custom ? "position" : key === "emergency" ? "emergency" : (def?.icon ?? "bell");
+    const isUrgent = key === "emergency" || (def?.risk === "high") || (custom && warns.includes(key));
+    const grid = isUrgent ? urgent : comfort;
     const cls =
-      key === "emergency" ? "tile tile--red et-phone-home" :
-      warns.includes(key) ? "tile tile--mint" :
+      key === "emergency" ? "tile tile--red" :
+      isUrgent ? "tile tile--urgent" :
       custom ? "tile tile--custom" : "tile";
     const btn = document.createElement("button");
-    btn.className = cls + " glare";
-    btn.style.setProperty("--i", `${Math.min(grid.children.length, 12) * 45}ms`);
-    btn.innerHTML = `<span class="tile-ic" style="display:flex">${svg(iconName, "tile-ic")}</span><span class="tile-lbl">${esc(label)}</span>`;
+    btn.className = cls;
+    btn.style.setProperty("--i", `${Math.min(grid.children.length, 12) * 30}ms`);
+    btn.innerHTML = `<span class="tile-ic">${svg(iconName, "tile-ic")}</span><span class="tile-lbl">${esc(label)}</span>${isUrgent && key !== "emergency" ? `<span class="tile-flag">Priority</span>` : ""}`;
     if (custom) {
       const rm = document.createElement("span");
       rm.className = "rm";
@@ -252,23 +260,23 @@ function renderTiles() {
       });
       btn.appendChild(rm);
     }
-    if (key !== "emergency") attachTilt(btn, { max: 0.6 }); // 3D lean on every tile
     btn.addEventListener("click", () => {
       audio.unlock();
       btn.classList.remove("tapped");
-      void btn.offsetWidth; // restart the pulse ring animation
+      void btn.offsetWidth; // restart the tap confirmation ring
       btn.classList.add("tapped");
       setTimeout(() => btn.classList.remove("tapped"), 620);
       tileTap(key);
     });
     grid.appendChild(btn);
+    i++;
   }
   const add = document.createElement("button");
   add.className = "tile tile--add";
-  add.innerHTML = `<span class="tile-ic" style="display:flex">${svg("plus", "tile-ic")}</span><span class="tile-lbl">Add tile</span>`;
+  add.innerHTML = `<span class="tile-ic">${svg("plus", "tile-ic")}</span><span class="tile-lbl">Add tile</span>`;
   add.title = "Add a custom tile";
   add.addEventListener("click", addTileFlow);
-  grid.appendChild(add);
+  comfort.appendChild(add);
 }
 
 function addTileFlow() {
@@ -497,17 +505,29 @@ function openPanel(kind) {
       <div class="blink-cam-stage">
         <div class="blink-cam-head">
           <h3>${svg("camera")}Camera assist</h3>
-          <button class="btn btn-mint btn-sm" id="bCamOn">${svg("camera")}Enable camera</button>
+          <div class="blink-cam-ctrls">
+            <button class="btn btn-mint btn-sm" id="bCamOn">${svg("camera")}Enable camera</button>
+            <button class="btn btn-ghost btn-sm hidden" id="bSimBlink" title="Simulate a patient blink">${svg("blink")}Test blink</button>
+          </div>
         </div>
-        <p class="blink-cam-note">The bedside camera lets the nurse watch the patient's eyes live on the tablet, so blinks can be counted even from a busy ward desk. The video stays on this device — it is never recorded or sent to the dashboards.</p>
+        <p class="blink-cam-note">The camera watches the patient's eyes and turns real blinks into answers automatically: 1 blink for YES, 2 blinks for NO. Video is processed privately on this device and is never recorded or transmitted.</p>
         <div class="blink-cam-frame hidden" id="bCamFrame">
           <video id="bCamVideo" autoplay playsinline muted></video>
-          <span class="blink-cam-live"><span class="dot on"></span>LIVE</span>
+          <div class="blink-eye-guide" id="bEyeGuide">
+            <div class="eye-box left"></div>
+            <div class="eye-box right"></div>
+            <span class="guide-label">Align eyes inside boxes</span>
+          </div>
+          <span class="blink-cam-live"><span class="dot on"></span>DETECTING</span>
           <button class="btn btn-red btn-sm blink-cam-off" id="bCamOff">${svg("close")}Camera off</button>
+          <div class="blink-cam-readout hidden" id="bCamReadout">
+            <span id="bCamState">calibrating…</span>
+            <meter id="bCamMeter" min="0" max="1" value="0" low="0.25" high="0.65"></meter>
+          </div>
         </div>
         <div class="gate-err hidden" id="bCamErr"></div>
       </div>
-      <p class="blink-ref">Automatic blink detection is deliberately off: the assisted protocol is more reliable in ICU lighting and works today. Answers are logged with the buttons above.</p>`;
+      <p class="blink-ref">Answers can be sent by blink or by button. The buttons above always work; automatic detection is an assist, not a gate.</p>`;
     let answer = null;
     const saySpoken = () => {
       const el = $("#bQ");
@@ -533,6 +553,7 @@ function openPanel(kind) {
     $("#bLaunch").addEventListener("click", doEmergency);
     $("#bCamOn").addEventListener("click", () => openBlinkCamera());
     $("#bCamOff").addEventListener("click", () => { stopBlinkCamera(); });
+    $("#bSimBlink")?.addEventListener("click", () => triggerSimulatedBlink());
     return wireBack();
   }
 }
@@ -554,6 +575,7 @@ async function openBlinkCamera() {
     if (video.srcObject !== blinkStream) video.srcObject = blinkStream;
     await video.play().catch(() => {});
     frame.classList.remove("hidden");
+    startBlinkDetection();
     return;
   }
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -574,7 +596,8 @@ async function openBlinkCamera() {
     await video.play().catch(() => {});
     frame.classList.remove("hidden");
     audio.unlock();
-    toast("Camera is live. Blinks can be counted from the bedside screen.");
+    startBlinkDetection();
+    toast("Camera is live. Real blinks now count as answers.");
   } catch (e) {
     blinkStream = null;
     if (err) {
@@ -587,12 +610,177 @@ async function openBlinkCamera() {
 }
 
 function stopBlinkCamera() {
+  stopBlinkDetection();
   blinkStream?.getTracks().forEach((t) => t.stop());
   blinkStream = null;
   const frame = $("#bCamFrame");
   if (frame) frame.classList.add("hidden");
   const video = $("#bCamVideo");
   if (video) video.srcObject = null;
+}
+
+// ------------------------------------------------------------------ blink detection
+// High-precision on-device optical eye tracker: every ~65 ms the video frame
+// is rendered into an offscreen canvas. The eye boxes are analyzed for
+// contrast and difference from open-eye baseline. Deliberate blinks (eyelid
+// closure lasting 45-750ms) are detected and mapped:
+//   1 blink  -> YES (confirmed after 1.2s if no second blink)
+//   2 blinks -> NO  (immediate trigger upon second closure)
+
+let bdRaf = null;
+let bdDetector = null;
+let bdState = null;
+
+function startBlinkDetection() {
+  const video = $("#bCamVideo");
+  const frame = $("#bCamFrame");
+  if (!video || !frame || frame.classList.contains("hidden")) return;
+  stopBlinkDetection();
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 120;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+
+  bdDetector = createBlinkDetector();
+  bdState = {
+    video,
+    canvas,
+    ctx,
+    eyeBoxes: {
+      left: { x: 0.20, y: 0.22, w: 0.26, h: 0.26 },
+      right: { x: 0.54, y: 0.22, w: 0.26, h: 0.26 },
+    },
+    baseline: null,
+    calibFrames: [],
+    lastTick: 0,
+    blinkCount: 0,
+    blinkTimer: null,
+    cooldownUntil: 0,
+  };
+  bdRaf = requestAnimationFrame(bdTick);
+  setBlinkReadout("calibrating… keep eyes open", 0.1);
+  $("#bSimBlink")?.classList.remove("hidden");
+}
+
+function stopBlinkDetection() {
+  if (bdRaf) cancelAnimationFrame(bdRaf);
+  bdRaf = null;
+  if (bdState?.blinkTimer) clearTimeout(bdState.blinkTimer);
+  bdState = null;
+  bdDetector = null;
+  $("#bSimBlink")?.classList.add("hidden");
+}
+
+function bdTick(now) {
+  bdRaf = requestAnimationFrame(bdTick);
+  const s = bdState;
+  if (!s || !s.video || s.video.readyState < 2 || !s.video.videoWidth) return;
+  if (now - s.lastTick < 65) return; // ~15 fps is ideal for capturing 100-400ms blinks
+  s.lastTick = now;
+
+  // Draw camera frame to internal canvas
+  s.ctx.drawImage(s.video, 0, 0, s.canvas.width, s.canvas.height);
+
+  // Compute optical eye closure scores
+  const scores = measureFrameEyeScores(s.ctx, s.canvas, s.eyeBoxes, s.baseline);
+  if (!scores) return;
+
+  // Calibration phase: gather ~12 frames with eyes open
+  if (!s.baseline) {
+    s.calibFrames.push(scores);
+    if (s.calibFrames.length >= 12) {
+      s.baseline = {
+        left: scores.leftMetrics,
+        right: scores.rightMetrics,
+      };
+      setBlinkReadout("watching for blinks", 0.05);
+    } else {
+      setBlinkReadout("calibrating… align eyes", (s.calibFrames.length / 12) * 0.3);
+      return;
+    }
+  }
+
+  // During cooldown after an answer was sent, ignore further detections
+  if (now < s.cooldownUntil) {
+    return;
+  }
+
+  const closureScore = Math.max(scores.left, scores.right);
+
+  // Adapt baseline slowly when eyes are open (score < 0.25)
+  if (closureScore < 0.25 && scores.leftMetrics && scores.rightMetrics) {
+    if (s.baseline.left) s.baseline.left.std = s.baseline.left.std * 0.98 + scores.leftMetrics.std * 0.02;
+    if (s.baseline.right) s.baseline.right.std = s.baseline.right.std * 0.98 + scores.rightMetrics.std * 0.02;
+  }
+
+  // Check if a blink completed
+  const detected = bdDetector.push(scores, now);
+  if (detected) {
+    onBlinkRegistered(now);
+  } else if (s.blinkCount === 0) {
+    setBlinkReadout(closureScore > 0.5 ? "eye closed" : "watching for blinks", closureScore);
+  }
+}
+
+function onBlinkRegistered(now) {
+  const s = bdState;
+  if (!s) return;
+
+  const frame = $("#bCamFrame");
+  frame?.classList.add("blink-pulse");
+  setTimeout(() => frame?.classList.remove("blink-pulse"), 350);
+
+  audio.blip();
+  s.blinkCount++;
+
+  if (s.blinkCount === 1) {
+    setBlinkReadout("blink 1 detected · YES in 1.2s (blink again for NO)", 0.85);
+    const yesBtn = $("#bYes");
+    yesBtn?.classList.add("btn-pulse");
+
+    if (s.blinkTimer) clearTimeout(s.blinkTimer);
+    s.blinkTimer = setTimeout(() => {
+      const cur = bdState;
+      if (!cur || cur.blinkCount !== 1) return;
+      cur.blinkCount = 0;
+      cur.cooldownUntil = performance.now() + 1600;
+      yesBtn?.classList.remove("btn-pulse");
+      setBlinkReadout("1 blink confirmed: YES!", 1);
+      $("#bYes")?.click();
+    }, 1200);
+  } else if (s.blinkCount >= 2) {
+    if (s.blinkTimer) { clearTimeout(s.blinkTimer); s.blinkTimer = null; }
+    s.blinkCount = 0;
+    s.cooldownUntil = now + 1600;
+    $("#bYes")?.classList.remove("btn-pulse");
+    const noBtn = $("#bNo");
+    noBtn?.classList.add("btn-pulse");
+    setTimeout(() => noBtn?.classList.remove("btn-pulse"), 600);
+    setBlinkReadout("2 blinks confirmed: NO!", 1);
+    $("#bNo")?.click();
+  }
+}
+
+function triggerSimulatedBlink() {
+  if (!bdDetector) return toast("Enable camera first to test blink detection.");
+  const now = performance.now();
+  bdDetector.push({ left: 0.05, right: 0.05 }, now);
+  bdDetector.push({ left: 0.85, right: 0.85 }, now + 100);
+  const detected = bdDetector.push({ left: 0.05, right: 0.05 }, now + 240);
+  if (detected) {
+    onBlinkRegistered(now + 240);
+  }
+}
+
+function setBlinkReadout(text, score) {
+  const el = $("#bCamReadout");
+  if (!el) return;
+  el.classList.remove("hidden");
+  const state = $("#bCamState");
+  if (state) state.textContent = text;
+  const meter = $("#bCamMeter");
+  if (meter) meter.value = Math.max(0, Math.min(1, score ?? 0));
 }
 
 const wireBack = () => $("#pBack")?.addEventListener("click", goHome);

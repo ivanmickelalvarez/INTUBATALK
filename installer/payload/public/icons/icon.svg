@@ -1,17 +1,52 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="bubble" x1="72" y1="72" x2="432" y2="424" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#61e2cf"/>
-      <stop offset="1" stop-color="#35c3b3"/>
+    <!-- warm clay tile (matches the app surface palette) -->
+    <radialGradient id="tile" cx="0.30" cy="0.18" r="1.05">
+      <stop stop-color="#faf6f0"/>
+      <stop offset="0.55" stop-color="#f1ebe1"/>
+      <stop offset="1" stop-color="#e7dfd2"/>
+    </radialGradient>
+    <!-- mint gel bubble with depth toward the bottom right -->
+    <linearGradient id="bubble" x1="100" y1="110" x2="430" y2="400" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6fe4d1"/>
+      <stop offset="0.55" stop-color="#2fb9a7"/>
+      <stop offset="1" stop-color="#1c9082"/>
     </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e2f4ee"/>
+    </linearGradient>
+    <clipPath id="bbclip">
+      <path d="M112 104h288c39.8 0 72 32.2 72 72v128c0 39.8-32.2 72-72 72H264l-88 68v-68h-64c-39.8 0-72-32.2-72-72V176c0-39.8 32.2-72 72-72z"/>
+    </clipPath>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#0d1218"/>
-  <path d="M112 104h288c39.8 0 72 32.2 72 72v128c0 39.8-32.2 72-72 72H264l-88 68v-68h-64c-39.8 0-72-32.2-72-72V176c0-39.8 32.2-72 72-72z" fill="url(#bubble)"/>
-  <g fill="#10212a">
-    <rect x="126" y="218" width="36" height="76" rx="18"/>
-    <rect x="190" y="190" width="36" height="132" rx="18"/>
-    <rect x="254" y="166" width="36" height="180" rx="18"/>
-    <rect x="318" y="190" width="36" height="132" rx="18"/>
-    <rect x="382" y="218" width="36" height="76" rx="18"/>
+
+  <rect width="512" height="512" rx="112" fill="url(#tile)"/>
+  <!-- subtle inner highlight/shadow ring: gives the tile clay depth -->
+  <rect x="7" y="7" width="498" height="498" rx="105" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="7"/>
+  <rect x="14" y="14" width="484" height="484" rx="98" fill="none" stroke="rgba(148,128,104,.14)" stroke-width="7"/>
+
+  <!-- soft clay drop shadow under the bubble -->
+  <path d="M112 104h288c39.8 0 72 32.2 72 72v128c0 39.8-32.2 72-72 72H264l-88 68v-68h-64c-39.8 0-72-32.2-72-72V176c0-39.8 32.2-72 72-72z"
+        transform="translate(10,18)" fill="rgba(23,82,73,.24)" filter="url(#soft)"/>
+
+  <!-- bubble + gel overlays (shine top, shade bottom) -->
+  <path d="M112 104h288c39.8 0 72 32.2 72 72v128c0 39.8-32.2 72-72 72H264l-88 68v-68h-64c-39.8 0-72-32.2-72-72V176c0-39.8 32.2-72 72-72z"
+        fill="url(#bubble)"/>
+  <g clip-path="url(#bbclip)">
+    <ellipse cx="256" cy="46" rx="330" ry="165" fill="rgba(255,255,255,.40)"/>
+    <ellipse cx="256" cy="440" rx="310" ry="155" fill="rgba(9,74,66,.28)"/>
+  </g>
+
+  <!-- waveform bars: cream pills, optically centered in the bubble -->
+  <g fill="url(#bar)">
+    <rect x="126" y="188" width="36" height="104" rx="18"/>
+    <rect x="190" y="154" width="36" height="172" rx="18"/>
+    <rect x="254" y="132" width="36" height="216" rx="18"/>
+    <rect x="318" y="154" width="36" height="172" rx="18"/>
+    <rect x="382" y="188" width="36" height="104" rx="18"/>
   </g>
 </svg>

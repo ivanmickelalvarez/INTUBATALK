@@ -1,0 +1,67 @@
+{
+  "packageId": "com.intubatalk.mobile",
+  "host": "intubatalk.intubatalk.workers.dev",
+  "name": "INTUBATALK",
+  "launcherName": "INTUBATALK",
+  "display": "fullscreen",
+  "themeColor": "#F3F1EC",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#F3F1EC",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://intubatalk.intubatalk.workers.dev/icons/icon.svg",
+  "maskableIconUrl": "https://intubatalk.intubatalk.workers.dev/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Users\\USER\\.intubatalk\\android-release.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 2,
+  "shortcuts": [
+    {
+      "name": "Patient tablet",
+      "shortName": "Patient",
+      "url": "https://intubatalk.intubatalk.workers.dev/",
+      "chosenIconUrl": "https://intubatalk.intubatalk.workers.dev/icons/icon-512.png"
+    },
+    {
+      "name": "Nurse dashboard",
+      "shortName": "Nurse",
+      "url": "https://intubatalk.intubatalk.workers.dev/nurse",
+      "chosenIconUrl": "https://intubatalk.intubatalk.workers.dev/icons/icon-512.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://intubatalk.intubatalk.workers.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "playBilling": {
+      "enabled": false
+    },
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://intubatalk.intubatalk.workers.dev/",
+  "minSdkVersion": 24,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1.0.0"
+}

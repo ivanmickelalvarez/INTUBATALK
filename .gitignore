@@ -8,6 +8,16 @@ node_modules/
 .freebuff/
 .intubatalk-store.json
 tmp-check/
+android-twa/.gradle/
+android-twa/**/build/
+android-twa/local.properties
+android-twa/android-keystore
+android-twa/**/*.keystore
+android-twa/**/*.jks
+release/android/*.apk
+release/windows/
+test/*.exe
+.superpowers/
 
 # Logs
 logs

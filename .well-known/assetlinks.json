@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.intubatalk.mobile",
+      "sha256_cert_fingerprints": [
+        "06:1F:D3:F4:2A:7C:FB:18:3D:AE:28:3E:85:37:2E:84:75:9B:BB:79:54:29:7E:40:64:12:7A:A4:94:58:61:04"
+      ]
+    }
+  }
+]

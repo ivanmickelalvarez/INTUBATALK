@@ -6,6 +6,15 @@
     "start": "node server.js",
     "dev": "node server.js",
     "dev:wrangler": "wrangler dev --port 8788 --local",
+    "access:bootstrap": "wrangler deploy --config wrangler.access-bootstrap.jsonc",
+    "test": "node --test",
+    "windows:mode-test": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-windows-mode.ps1",
+    "windows:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-windows.ps1",
+    "windows:installer": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-installer.ps1",
+    "mobile:icons": "node scripts/generate-mobile-icons.mjs",
+    "android:assetlinks": "node scripts/create-assetlinks.mjs",
+    "android:init": "node scripts/init-android.mjs",
+    "android:build": "node scripts/build-android.mjs",
     "build": "echo Built for Vercel",
     "check": "esbuild public/js/patient.js public/js/nurse.js public/js/needs.js public/js/lib/sync.js public/js/lib/util.js public/js/lib/audio.js public/js/lib/tts.js public/js/lib/icons.js public/js/lib/ambient.js public/js/lib/tilt3d.js public/js/lib/feedback.js worker.js --outdir=tmp-check && echo SYNTAX_OK",
     "clean": "node -e \"require('fs').rmSync('tmp-check',{recursive:true,force:true})\""
@@ -19,6 +28,11 @@
   ],
   "type": "commonjs",
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.1",
     "wrangler": "^4.149.0"
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "1.27.0",
+    "sharp": "0.35.5"
   }
 }

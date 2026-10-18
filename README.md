@@ -88,9 +88,13 @@ stack of tablet plus app plus nurse dashboard plus backup laminated board.
 
 ### Cross-device use
 
-For a public deployment, both devices must open the same deployed URL. The patient
+For Cloud mode, both devices open the same deployed HTTPS URL and sign in with an
+allowlisted staff email using Cloudflare Access email one-time PIN. The patient
 opens `/`, the nurse opens `/nurse`, and the nurse enters the patient's four-digit
 room code. The Cloudflare Worker deployment uses D1 as the shared durable store.
+Each device signs in independently. Access sessions last 12 hours; after expiry,
+the device must sign in again. The room and pending alerts remain in the shared
+database while a device reauthenticates.
 
 For a local/LAN session, start the server on the host computer with `npm start` and
 use the printed **Wi-Fi / LAN** URL on both devices. Do not use `127.0.0.1` or
@@ -122,18 +126,50 @@ npm run check       # Runs esbuild syntax check across all scripts
 - Printable board: `http://127.0.0.1:8788/board`
 - Diagnostic console: `http://127.0.0.1:8788/console`
 
-## Cloudflare Deployment (recommended for cross-device use)
+## Shared Cloud, Windows, and Mobile Setup
 
-The durable public deployment is the Cloudflare Worker in `worker.js`. Create a D1
-database, put its real database ID in `wrangler.jsonc`, and deploy with:
+The Cloudflare Worker in `worker.js` and the D1 database in `wrangler.jsonc` provide
+one shared service for the Windows launcher, Android TWA, and Apple PWA. The selected
+release origin is `https://intubatalk.intubatalk.workers.dev`; `app-origin.txt` is the
+single origin value used by the Windows Cloud build and Android project. The deployed
+Worker is protected by a Cloudflare Access policy that allows only the approved staff
+email, using one-time PIN sign-in with a 12-hour session. Patient and nurse pages and
+all `/api/` routes require Access. Only the web manifest, app icon files, and Android
+Digital Asset Links file have path-specific public exceptions so browsers and Android
+can read install metadata; these routes do not serve dashboard or patient data. The
+Android Digital Asset Links file is published after the persistent signing key exists.
+
+Windows opens Cloud mode by default. Use `INTUBATALK.exe --local` to start its bundled
+Local/LAN service, or choose **Local LAN Mode** from the Start Menu. Build the EXE and
+installer with:
 
 ```bash
-npx wrangler d1 create intubatalk
-npx wrangler deploy
+npm run windows:build
+npm run windows:installer
 ```
 
-The Worker creates its tables on first request. Open the resulting Worker URL on
-both devices and pair them with the patient's room code.
+Android uses a Trusted Web Activity wrapper around the same PWA. After the shared
+site is deployed and its manifest is reachable, initialize and build the signed APK:
+
+```bash
+npm run android:init
+npm run android:build
+```
+
+The persistent signing keystore belongs at `%USERPROFILE%\.intubatalk\android-release.keystore`;
+back it up securely and reuse it for every update. Keep its passwords private. The
+APK output is `release/android/INTUBATALK-Android.apk`. Android fullscreen verification
+also requires `/.well-known/assetlinks.json` to match the APK package ID and certificate.
+
+On iPhone and iPad, open the same HTTPS origin in Safari and choose **Add to Home Screen**.
+All Cloud clients must use the same origin to share patient rooms and messages.
+
+**Prototype limitation:** Cloud mode requires an allowlisted staff email sign-in,
+but rooms still use four-digit pairing codes and this prototype is not a clinical
+system. Local/LAN mode has no Cloudflare Access protection and is only for trusted
+private networks. Do not use real patient information or treat this deployment as
+clinically ready; privacy, audit, operational, and clinical safety requirements
+remain outside this prototype.
 
 ## Vercel Deployment (compatibility only)
 

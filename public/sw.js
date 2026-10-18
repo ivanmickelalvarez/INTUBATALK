@@ -1,12 +1,12 @@
 // INTUBATALK service worker — offline-first app shell.
 // API calls are network-only (data freshness matters); everything else is cached.
-const CACHE = "intubatalk-v20";
+const CACHE = "intubatalk-v24";
 const SHELL = [
   "/", "/choose", "/nurse", "/board", "/dual", "/privacy", "/guidelines", "/404.html", "/manifest.webmanifest",
   "/css/base.css", "/css/patient.css", "/css/nurse.css",
   "/js/patient.js", "/js/nurse.js", "/js/needs.js",
-  "/js/lib/util.js", "/js/lib/audio.js", "/js/lib/tts.js", "/js/lib/sync.js", "/js/lib/icons.js",  "/js/lib/ambient.js", "/js/lib/tilt3d.js", "/js/lib/feedback.js",
-  "/icons/icon.svg",
+  "/js/lib/util.js", "/js/lib/audio.js", "/js/lib/tts.js", "/js/lib/sync.js", "/js/lib/icons.js",  "/js/lib/ambient.js", "/js/lib/tilt3d.js", "/js/lib/feedback.js", "/js/lib/blink-detector.mjs",
+  "/icons/icon.svg", "/icons/icon-512.png", "/icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (e) => {
