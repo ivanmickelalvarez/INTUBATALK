@@ -29,6 +29,7 @@
   "type": "commonjs",
   "dependencies": {
     "@mediapipe/tasks-vision": "1.1.1",
+    "@vercel/analytics": "^2.0.1",
     "wrangler": "^4.149.0"
   },
   "devDependencies": {
